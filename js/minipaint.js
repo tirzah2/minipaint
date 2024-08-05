@@ -176,6 +176,90 @@ async function replaceTile() {
   }, "image/png");
 }
 
+async function loadToken() {
+  const selectedTokens = canvas.tokens.controlled;
+
+  if (selectedTokens.length !== 1) {
+    ui.notifications.warn("Please select exactly one token.");
+    return;
+  }
+
+  const token = selectedTokens[0];
+  const tokenSrc = token.document.texture.src;
+
+  if (!tokenSrc) {
+    ui.notifications.error("Token image source not found.");
+    return;
+  }
+
+  const image = new Image();
+  image.src = tokenSrc;
+
+  image.onload = () => {
+    const Layers = document.getElementById('myFrame').contentWindow.Layers;
+    const name = image.src.replace(/^.*[\\\/]/, '');
+    const new_layer = {
+      name: name,
+      type: 'image',
+      data: image,
+      width: image.naturalWidth || image.width,
+      height: image.naturalHeight || image.height,
+      width_original: image.naturalWidth || image.width,
+      height_original: image.naturalHeight || image.height,
+    };
+    Layers.insert(new_layer);
+  };
+
+  image.onerror = () => {
+    ui.notifications.error("Failed to load the token image.");
+  };
+}
+async function replaceToken() {
+  const selectedTokens = canvas.tokens.controlled;
+
+  if (selectedTokens.length !== 1) {
+    ui.notifications.warn("Please select exactly one token.");
+    return;
+  }
+
+  const token = selectedTokens[0];
+  const originalPath = token.document.texture.src;
+  const directoryPath = originalPath.substring(0, originalPath.lastIndexOf("/"));
+
+  const iframe = document.getElementById('myFrame');
+  const minipaintCanvas = iframe.contentWindow.document.querySelector('#canvas_minipaint');
+
+  if (!minipaintCanvas) {
+    ui.notifications.error("Could not find the miniPaint canvas.");
+    return;
+  }
+
+  // Convert the miniPaint canvas content to a Blob
+  minipaintCanvas.toBlob(async (blob) => {
+    if (!blob) {
+      ui.notifications.error("Failed to create a Blob from the canvas.");
+      return;
+    }
+
+    // Generate a random filename
+    const randomFilename = generateRandomFilename() + ".png";
+
+    // Create a File object from the Blob with the random filename
+    const file = new File([blob], randomFilename, { type: blob.type });
+
+    // Upload the image file to the same directory as the original token image
+    const response = await FilePicker.upload("data", directoryPath, file, {});
+
+    if (response.path) {
+      // Update the token with the new image source
+      await token.document.update({ "texture.src": response.path });
+
+      ui.notifications.info("Token image replaced successfully.");
+    } else {
+      ui.notifications.error("Failed to upload the modified image.");
+    }
+  }, "image/png");
+}
 
 
 async function showCanvasInImagePopout() {

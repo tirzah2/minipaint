@@ -38,55 +38,72 @@ function injectMenuItems() {
 
   // Check if iframe and its content are accessible
   if (iframe && iframe.contentWindow) {
-    const iframeDocument = iframe.contentWindow.document;
+  const iframeDocument = iframe.contentWindow.document;
 
-    // Find the menu bar element
-    const menuBar = iframeDocument.querySelector('.menu_bar');
+  // Find the menu bar element
+  const menuBar = iframeDocument.querySelector('.menu_bar');
 
-    if (menuBar) {
-      // Create the Load Tile menu item
-      const loadTileMenuItem = iframeDocument.createElement('li');
-      loadTileMenuItem.innerHTML = `
-  <a id="main_menu_x" role="menuitem" tabindex="-1" aria-haspopup="false" aria-expanded="false" href="javascript:void(0)" data-level="0" onclick="window.parent.loadTile()" title="Load the selected tile into miniPaint">
-    <span class="name trn">Load Tile</span>
-  </a>
-`;
+  if (menuBar) {
+    // Create the Load Tile and Load Token menu items
+    const loadTileMenuItem = iframeDocument.createElement('li');
+    loadTileMenuItem.innerHTML = `
+      <a id="main_menu_x" role="menuitem" tabindex="-1" aria-haspopup="false" aria-expanded="false" href="javascript:void(0)" data-level="0" onclick="window.parent.loadTile()" title="Load the selected tile into miniPaint">
+        <span class="name trn">Load Tile</span>
+      </a>
+    `;
+    const loadTokenMenuItem = iframeDocument.createElement('li');
+    loadTokenMenuItem.innerHTML = `
+      <a id="main_menu_y" role="menuitem" tabindex="-1" aria-haspopup="false" aria-expanded="false" href="javascript:void(0)" data-level="0" onclick="window.parent.loadToken()" title="Load the selected token into miniPaint">
+        <span class="name trn">Load Token</span>
+      </a>
+    `;
 
-// Browse Foundry Menu Item
-const loadBrowseMenuItem = iframeDocument.createElement('li');
-loadBrowseMenuItem.innerHTML = `
-  <a id="main_menu_xxx" role="menuitem" tabindex="-1" aria-haspopup="false" aria-expanded="false" href="javascript:void(0)" data-level="0" onclick="window.parent.browseFoundry()" title="Open the Foundry file picker to import an image">
-    <span class="name trn">Browse Foundry</span>
-  </a>
-`;
+    // Browse Foundry Menu Item
+    const loadBrowseMenuItem = iframeDocument.createElement('li');
+    loadBrowseMenuItem.innerHTML = `
+      <a id="main_menu_xxx" role="menuitem" tabindex="-1" aria-haspopup="false" aria-expanded="false" href="javascript:void(0)" data-level="0" onclick="window.parent.browseFoundry()" title="Open the Foundry file picker to import an image">
+        <span class="name trn">Browse Foundry</span>
+      </a>
+    `;
 
-// Replace Tile Menu Item
-const replaceTileMenuItem = iframeDocument.createElement('li');
-replaceTileMenuItem.innerHTML = `
-  <a id="main_menu_xx" role="menuitem" tabindex="-1" aria-haspopup="false" aria-expanded="false" href="javascript:void(0)" data-level="0" onclick="window.parent.replaceTile()" title="Replace the selected tile with the edited image">
-    <span class="name trn">Replace Tile</span>
-  </a>
-`;
-const sendTochat = iframeDocument.createElement('li');
-sendTochat.innerHTML = `
-  <a id="main_menu_xx" role="menuitem" tabindex="-1" aria-haspopup="false" aria-expanded="false" href="javascript:void(0)" data-level="0" onclick="window.parent.showCanvasInImagePopout()" title="Show to players!">
-    <span class="name trn">Popout!</span>
-  </a>
-`;
+    // Create the Replace Tile and Replace Token menu items
+    const replaceTileMenuItem = iframeDocument.createElement('li');
+    replaceTileMenuItem.innerHTML = `
+      <a id="main_menu_xx" role="menuitem" tabindex="-1" aria-haspopup="false" aria-expanded="false" href="javascript:void(0)" data-level="0" onclick="window.parent.replaceTile()" title="Replace the selected tile with the edited image">
+        <span class="name trn">Replace Tile</span>
+      </a>
+    `;
+    const replaceTokenMenuItem = iframeDocument.createElement('li');
+    replaceTokenMenuItem.innerHTML = `
+      <a id="main_menu_yy" role="menuitem" tabindex="-1" aria-haspopup="false" aria-expanded="false" href="javascript:void(0)" data-level="0" onclick="window.parent.replaceToken()" title="Replace the selected token with the edited image">
+        <span class="name trn">Replace Token</span>
+      </a>
+    `;
 
-const adddot = iframeDocument.createElement('li');
-adddot.innerHTML = `
-<div style="display: flex;justify-content: center;align-items: center;margin-right: 5px;margin-left: 2px;">•</div>
-`;
+    const sendTochat = iframeDocument.createElement('li');
+    sendTochat.innerHTML = `
+      <a id="main_menu_zz" role="menuitem" tabindex="-1" aria-haspopup="false" aria-expanded="false" href="javascript:void(0)" data-level="0" onclick="window.parent.showCanvasInImagePopout()" title="Show to players!">
+        <span class="name trn">Popout!</span>
+      </a>
+    `;
 
-      // Insert the new menu items at the beginning of the menu bar
-      menuBar.insertBefore(adddot, menuBar.firstChild);
-      menuBar.insertBefore(sendTochat, menuBar.firstChild);
-      menuBar.insertBefore(replaceTileMenuItem, menuBar.firstChild);
-      menuBar.insertBefore(loadBrowseMenuItem, menuBar.firstChild);
-      menuBar.insertBefore(loadTileMenuItem, menuBar.firstChild);
-    }
+    const adddot = iframeDocument.createElement('li');
+    adddot.innerHTML = `
+      <div style="display: flex;justify-content: center;align-items: center;margin-right: 5px;margin-left: 2px;">•</div>
+    `;
+
+    // Insert the new menu items at the beginning of the menu bar
+    menuBar.insertBefore(adddot, menuBar.firstChild);
+    menuBar.insertBefore(sendTochat, menuBar.firstChild);
+    menuBar.insertBefore(replaceTokenMenuItem, menuBar.firstChild);
+    menuBar.insertBefore(replaceTileMenuItem, menuBar.firstChild);
+    menuBar.insertBefore(loadBrowseMenuItem, menuBar.firstChild);
+    menuBar.insertBefore(loadTokenMenuItem, menuBar.firstChild);
+    menuBar.insertBefore(loadTileMenuItem, menuBar.firstChild);
   }
+}
+
+
 }
 
 // Attach an event listener to the iframe to run the function once it's loaded
