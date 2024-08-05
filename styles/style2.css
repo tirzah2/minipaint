@@ -1,0 +1,12 @@
+
+.minpaint .window-content {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    padding: 0px;
+    color: var(--color-text-dark-primary);
+    overflow-y: hidden;
+    overflow-x: hidden;
+    max-height: 650px;
+}
