@@ -1,7 +1,8 @@
 .minpaint {
     z-index: 100;
-    min-width: 500px;
+    min-width: 750px;
 height: unset !important;
+width: unset !important;
     min-height: 500px !important;
     max-height: fit-content;
     resize: both;
@@ -24,7 +25,7 @@ height: unset !important;
     min-height: 500px !important;
     border: 0px;
     resize: both;
-    min-width: 500px;
+    min-width: 750px;
 }
 
 .minpaint .window-content {
