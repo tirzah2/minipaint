@@ -1,3 +1,5 @@
+let minipaintDoc;
+
 Hooks.on('getSceneControlButtons', (controls) => {
   const tileControls = controls.find(control => control.name === 'tiles');
   const tokenControls = controls.find(control => control.name === 'token');
@@ -26,6 +28,131 @@ Hooks.on('getSceneControlButtons', (controls) => {
     });
   }
 });
+
+// Function to launch miniPaint for editing an actor's prototype token
+Hooks.once("tidy5e-sheet.ready", (api) => {
+  api.config.actorPortrait.registerMenuCommands([
+    {
+      label: "Edit Prototype Token",
+      iconClass: "fas fa-paint-brush",
+      tooltip: "Edit the prototype token texture with miniPaint",
+      enabled: (params) => params.actor.type !== "vehicle",
+      execute: (params) => {
+        const token = foundry.utils.getProperty(params, "context.options.token");
+        const minipaintDoc = token ? { actor: params.actor, token } : params.actor;
+        window.minipaintDoc = minipaintDoc; // Set minipaintDoc globally
+        launchMiniPaintForActor(minipaintDoc, 'prototypeToken');
+      },
+    },
+    {
+      label: "Edit Actor Image",
+      iconClass: "fas fa-user-edit",
+      tooltip: "Edit the actor's image with miniPaint",
+      enabled: (params) => params.actor.type !== "vehicle",
+      execute: (params) => {
+        const actor = params.actor;
+        window.minipaintDoc = actor; // Set minipaintDoc globally for actor image
+        launchMiniPaintForActor(actor, 'img');
+      },
+    },
+  ]);
+});
+
+// Function to launch miniPaint for editing an actor's prototype token or image
+async function launchMiniPaintForActor(minipaintDoc, type) {
+  const textureSrc = type === 'prototypeToken' ? minipaintDoc.prototypeToken.texture.src : minipaintDoc.img;
+
+  if (!textureSrc) {
+    ui.notifications.error("Image source not found.");
+    return;
+  }
+
+  await openMiniPaint(); // Open miniPaint
+
+  waitForMiniPaintToLoad(() => loadActorTexture(textureSrc));
+}
+
+// Function to load the actor's prototype token or image into miniPaint
+async function loadActorTexture(textureSrc) {
+  const image = new Image();
+  image.src = textureSrc;
+
+  image.onload = () => {
+    const Layers = document.getElementById('myFrame').contentWindow.Layers;
+    const name = image.src.replace(/^.*[\\\/]/, '');
+    const new_layer = {
+      name: name,
+      type: 'image',
+      data: image,
+      width: image.naturalWidth || image.width,
+      height: image.naturalHeight || image.height,
+      width_original: image.naturalWidth || image.width,
+      height_original: image.naturalHeight || image.height,
+    };
+    Layers.insert(new_layer);
+  };
+
+  image.onerror = () => {
+    ui.notifications.error("Failed to load the image.");
+  };
+}
+
+// Function to save the modified image back to the actor's prototype token or actor image
+async function replaceActorTexture(type) {
+  // Use the global minipaintDoc variable
+  const minipaintDoc = window.parent.minipaintDoc;
+
+  if (!minipaintDoc) {
+    ui.notifications.error("No actor document found.");
+    return;
+  }
+
+  const iframe = document.getElementById('myFrame');
+  const minipaintCanvas = iframe.contentWindow.document.querySelector('#canvas_minipaint');
+
+  if (!minipaintCanvas) {
+    ui.notifications.error("Could not find the miniPaint canvas.");
+    return;
+  }
+
+  minipaintCanvas.toBlob(async (blob) => {
+    if (!blob) {
+      ui.notifications.error("Failed to create a Blob from the canvas.");
+      return;
+    }
+
+    const directoryPath = type === 'prototypeToken'
+      ? minipaintDoc.prototypeToken.texture.src.substring(0, minipaintDoc.prototypeToken.texture.src.lastIndexOf("/"))
+      : minipaintDoc.img.substring(0, minipaintDoc.img.lastIndexOf("/"));
+      
+    const randomFilename = generateRandomFilename() + ".png";
+
+    const file = new File([blob], randomFilename, { type: blob.type });
+    const response = await FilePicker.upload("data", directoryPath, file, {});
+
+    if (response.path) {
+      if (type === 'prototypeToken') {
+        await minipaintDoc.update({ "prototypeToken.texture.src": response.path });
+      } else {
+        await minipaintDoc.update({ "img": response.path });
+      }
+     // ui.notifications.info("Image updated successfully.");
+    } else {
+      ui.notifications.error("Failed to upload the modified image.");
+    }
+  }, "image/png");
+}
+
+// Utility function to wait until miniPaint is fully loaded
+function waitForMiniPaintToLoad(callback) {
+  const interval = setInterval(() => {
+    const iframe = document.getElementById('myFrame');
+    if (iframe && iframe.contentWindow && iframe.contentWindow.Layers) {
+      clearInterval(interval);
+      callback();
+    }
+  }, 100); // Check every 100ms
+}
 
 // Function to open miniPaint and automatically load the selected tile or token
 async function openMiniPaintWithAutoLoad() {
@@ -143,7 +270,7 @@ async function browseFoundry() {
           height_original: image.naturalHeight || image.height,
         };
         Layers.insert(new_layer);
-        ui.notifications.info("Image loaded as a layer successfully.");
+       // ui.notifications.info("Image loaded as a layer successfully.");
       };
 
       image.onerror = () => {
@@ -294,7 +421,7 @@ async function replaceToken() {
       // Update the token with the new image source
       await token.document.update({ "texture.src": response.path });
 
-      ui.notifications.info("Token image replaced successfully.");
+    //  ui.notifications.info("Token image replaced successfully.");
     } else {
       ui.notifications.error("Failed to upload the modified image.");
     }
@@ -330,7 +457,7 @@ async function showCanvasInImagePopout() {
       shareable: true
     }).render(true);
 
-    ui.notifications.info("ImagePopout opened successfully.");
+  //  ui.notifications.info("ImagePopout opened successfully.");
   } else {
     ui.notifications.error("Failed to upload the image.");
   }
