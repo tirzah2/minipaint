@@ -1,17 +1,47 @@
-// Register the button in the Tile Controls
 Hooks.on('getSceneControlButtons', (controls) => {
   const tileControls = controls.find(control => control.name === 'tiles');
+  const tokenControls = controls.find(control => control.name === 'token');
+  
+  // Add miniPaint button to Tile Controls
   if (tileControls) {
     tileControls.tools.push({
       name: "minipaint",
       title: "miniPaint",
-      icon: "fas fa-paint-brush", // Use any FontAwesome icon
-      visible: game.user.isGM, // Only show to GM users
-      onClick: () => openMiniPaint(),
+      icon: "fas fa-paint-brush",
+      visible: game.user.isGM,
+      onClick: () => openMiniPaintWithAutoLoad(),
+      button: true
+    });
+  }
+  
+  // Add miniPaint button to Token Controls
+  if (tokenControls) {
+    tokenControls.tools.push({
+      name: "minipaint",
+      title: "miniPaint",
+      icon: "fas fa-paint-brush",
+      visible: game.user.isGM,
+      onClick: () => openMiniPaintWithAutoLoad(),
       button: true
     });
   }
 });
+
+// Function to open miniPaint and automatically load the selected tile or token
+async function openMiniPaintWithAutoLoad() {
+  const selectedTiles = canvas.tiles.controlled;
+  const selectedTokens = canvas.tokens.controlled;
+
+  await openMiniPaint();
+
+  if (selectedTiles.length === 1 && selectedTokens.length === 0) {
+    waitForMiniPaintToLoad(() => loadTile());
+  } else if (selectedTokens.length === 1 && selectedTiles.length === 0) {
+    waitForMiniPaintToLoad(() => loadToken());
+  } else if (selectedTiles.length > 1 || selectedTokens.length > 1) {
+    ui.notifications.warn("More than one item selected, opening empty miniPaint.");
+  }
+}
 
 // Function to open the miniPaint application window
 async function openMiniPaint() {
@@ -27,13 +57,23 @@ async function openMiniPaint() {
 
   const dialogOptions = {
     width: 1000,
-    height: 530,
-    classes: ["dialog", "minpaint"] // Include both dialog and your custom class
+    height: 660,
+    classes: ["dialog", "minpaint"]
   };
 
   const dialog = new Dialog(dialogData, dialogOptions);
-
   dialog.render(true);
+}
+
+// Utility function to wait until miniPaint is fully loaded
+function waitForMiniPaintToLoad(callback) {
+  const interval = setInterval(() => {
+    const iframe = document.getElementById('myFrame');
+    if (iframe && iframe.contentWindow && iframe.contentWindow.Layers) {
+      clearInterval(interval);
+      callback();
+    }
+  }, 100); // Check every 100ms
 }
 
 
