@@ -1,6 +1,11 @@
 # New
 - Now works also with tokens
 - If you have a token or a tile selected while opening minipaint, it will be automatically imported
+- Added support for tidy5e
+
+
+https://github.com/user-attachments/assets/73187221-9ee1-4848-a9d1-493b9532e8a4
+
 
 https://github.com/user-attachments/assets/dc846868-4126-4693-ba18-4163611b38c8
 
