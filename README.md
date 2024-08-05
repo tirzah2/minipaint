@@ -2,7 +2,7 @@
 - Now works also with tokens
 - If you have a token or a tile selected while opening minipaint, it will be automatically imported
 
-https://github.com/user-attachments/assets/5dbe6a46-08c9-4b0d-a469-3548c98f226a
+https://github.com/user-attachments/assets/dc846868-4126-4693-ba18-4163611b38c8
 
 
 ## miniPaint Integration with FoundryVTT
