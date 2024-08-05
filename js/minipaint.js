@@ -27,7 +27,7 @@ async function openMiniPaint() {
 
   const dialogOptions = {
     width: 1000,
-    height: 660,
+    height: 530,
     classes: ["dialog", "minpaint"] // Include both dialog and your custom class
   };
 
