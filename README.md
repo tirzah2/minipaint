@@ -87,3 +87,6 @@ Once you have edited an image, you can use the **Show in ImagePopout** function 
 
 - **Tools**: Offers a wide array of tools including pencil, brush, magic wand, erase, fill, color picker, text, crop, blur, sharpen, desaturate, clone, borders, sprites, key-points, color zoom, replace color, restore alpha, and content fill.
 - **Help**: Provides keyboard shortcuts and translations to enhance the user experience.
+
+Licence
+https://github.com/tirzah2/minipaint/blob/main/Minipaint%20licence
