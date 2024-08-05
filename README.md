@@ -1,8 +1,8 @@
 
 ## miniPaint Integration with FoundryVTT
+<img width="747" alt="chrome_odb6rm33EZ" src="https://github.com/user-attachments/assets/ca51c196-5c53-4087-8ebe-f73db9b3f141">
+<img width="174" alt="chrome_LJAOXSXQPm" src="https://github.com/user-attachments/assets/619d4994-fce4-4a28-bc04-67552cf40ed5">
 
-![miniPaint](https://raw.githubusercontent.com/viliusle/miniPaint/master/images/preview.gif)
-*Generated using miniPaint*
 
 ### Overview
 
@@ -50,9 +50,9 @@ The following custom functions have been implemented to enhance your FoundryVTT 
 
 To open miniPaint within FoundryVTT, use the **Paintbrush** icon located in the Tile Controls. This will launch the miniPaint application window where you can start editing images.
 
-#### Loading a Tile
+#### Loading Selected Tile as Layer
 
-Select a tile in FoundryVTT and click the **Load Tile** button within miniPaint to bring the tile’s image into miniPaint for editing.
+Select a tile in FoundryVTT and click the **Load Tile** button within miniPaint to bring the tile’s image into miniPaint for editing, you can import as many as you want (one by one).
 
 #### Browsing Images
 
@@ -60,7 +60,7 @@ Click the **Browse Foundry** button to open the FoundryVTT file picker. Select a
 
 #### Replacing a Tile Image
 
-After editing an image in miniPaint, use the **Replace Tile** button to overwrite the selected tile's image with the updated version, ensuring the latest changes are reflected in your game.
+After editing an image in miniPaint, use the **Replace Tile** button to overwrite the selected tile's image with the updated version, ensuring the latest changes are reflected in your game. The old image is not lost, a new image will be created.
 
 #### Displaying an Image to Players
 
@@ -74,6 +74,10 @@ Once you have edited an image, you can use the **Show in ImagePopout** function 
 - **Edit**: Undo, cut, copy, paste, selection tools, and paste from clipboard.
 - **Image**: Provides detailed information, EXIF data, trim, zoom, resize (Hermite resample), rotate, flip, color corrections, auto-adjust colors, grid, histogram, and negative effects.
 - **Layers**: Multiple layers support, differences, merge, flatten, and transparency support.
+  <img width="752" alt="chrome_Fh5Aab3lvY" src="https://github.com/user-attachments/assets/44ba99e5-e2cd-4eae-a735-cf243c8751f4">
+
 - **Effects**: Includes Black and White, various blurs (box, Gaussian, stack, zoom), Bulge/Pinch, Denoise, Desaturate, Dither, Dot Screen, Edge, Emboss, Enrich, Gamma, Grains, GrayScale, Heatmap, JPG Compression, Mosaic, Oil, Sepia, Sharpen, Solarize, Tilt Shift, Vignette, Vibrance, Vintage, Blueprint, Night Vision, Pencil, and Instagram Filters.
+<img width="751" alt="chrome_dv8OS1viIN" src="https://github.com/user-attachments/assets/8de22c0b-1749-4720-b5fb-db3a51bb1ddc">
+
 - **Tools**: Offers a wide array of tools including pencil, brush, magic wand, erase, fill, color picker, text, crop, blur, sharpen, desaturate, clone, borders, sprites, key-points, color zoom, replace color, restore alpha, and content fill.
 - **Help**: Provides keyboard shortcuts and translations to enhance the user experience.
