@@ -1,7 +1,16 @@
+### Overview
+
+miniPaint is a powerful, browser-based image editor that now integrates seamlessly with FoundryVTT, allowing Game Masters to edit and manage images directly within the FoundryVTT environment. This integration brings the full power of miniPaint’s tools to your tabletop RPG experience.
+
 # New
 - Now works also with tokens
 - If you have a token or a tile selected while opening minipaint, it will be automatically imported
 - Added support for tidy5e
+- You can now remove backgrounds from an image. It uses remove.bg free api (50 uses a month with free account, check minipaint module settings to input the api key) It removes background from the whole canvas image, not from single layers. So think about your editing workflow before remove the background, my young Padawan.
+
+
+https://github.com/user-attachments/assets/6c363532-0aa8-4993-811d-ac96fd5e18a6
+
 
 
 https://github.com/user-attachments/assets/73187221-9ee1-4848-a9d1-493b9532e8a4
@@ -15,9 +24,7 @@ https://github.com/user-attachments/assets/dc846868-4126-4693-ba18-4163611b38c8
 <img width="174" alt="chrome_LJAOXSXQPm" src="https://github.com/user-attachments/assets/619d4994-fce4-4a28-bc04-67552cf40ed5">
 
 
-### Overview
 
-miniPaint is a powerful, browser-based image editor that now integrates seamlessly with FoundryVTT, allowing Game Masters to edit and manage images directly within the FoundryVTT environment. This integration brings the full power of miniPaint’s tools to your tabletop RPG experience.
 
 ### Change Log
 - **[miniPaint Releases](https://github.com/viliusle/miniPaint/releases)**
