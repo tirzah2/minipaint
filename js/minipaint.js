@@ -1,5 +1,16 @@
-let minipaintDoc;
+//seCKsBzKNhggbcp2XPphkYDv
 
+let minipaintDoc;
+Hooks.once('init', () => {
+  game.settings.register('minipaint', 'removeBgApiKey', {
+    name: 'Remove.bg API Key',
+    hint: 'Enter your API key from remove.bg here. You can get it by signing up at https://www.remove.bg/. Note: You get 50 free uses per month.',
+    scope: 'client', // This setting is stored per-client, so each user can have their own API key
+    config: true,
+    type: String,
+    default: '',
+  });
+});
 Hooks.on('getSceneControlButtons', (controls) => {
   const tileControls = controls.find(control => control.name === 'tiles');
   const tokenControls = controls.find(control => control.name === 'token');
@@ -69,7 +80,31 @@ async function launchMiniPaintForActor(minipaintDoc, type) {
 
   await openMiniPaint(); // Open miniPaint
 
-  waitForMiniPaintToLoad(() => loadActorTexture(textureSrc));
+  waitForMiniPaintToLoad(() => {
+    loadActorTexture(textureSrc);
+    highlightRelevantButton(type); // Highlight the relevant button
+  });
+}
+
+// Function to highlight the relevant button
+function highlightRelevantButton(type) {
+  const iframe = document.getElementById('myFrame');
+  if (iframe && iframe.contentWindow) {
+    const iframeDocument = iframe.contentWindow.document;
+    const saveProtoButton = iframeDocument.querySelector('#main_menu_save_proto');
+    const saveAIMGButton = iframeDocument.querySelector('#main_menu_save_actor_image');
+
+    // Reset styles
+    if (saveProtoButton) saveProtoButton.style.backgroundColor = '';
+    if (saveAIMGButton) saveAIMGButton.style.backgroundColor = '';
+
+    // Apply the specific style
+    if (type === 'prototypeToken' && saveProtoButton) {
+      saveProtoButton.style.backgroundColor = 'darkgreen'; // Adjust color as needed
+    } else if (type === 'img' && saveAIMGButton) {
+      saveAIMGButton.style.backgroundColor = 'darkgreen'; // Adjust color as needed
+    }
+  }
 }
 
 // Function to load the actor's prototype token or image into miniPaint
@@ -470,3 +505,93 @@ const urlToFile = async (url, filename) => {
   const file = new File([blob], filename, { type: blob.type });
   return file;
 };
+async function removeBackgroundAndAddLayer() {
+  // Step 1: Prepare the Image from the Canvas
+  const iframe = document.getElementById('myFrame');
+  const minipaintCanvas = iframe.contentWindow.document.querySelector('#canvas_minipaint');
+
+  if (!minipaintCanvas) {
+    ui.notifications.error("Could not find the miniPaint canvas.");
+    return;
+  }
+
+  // Get the API key from settings
+  const apiKey = game.settings.get('minipaint', 'removeBgApiKey');
+
+  if (!apiKey) {
+    ui.notifications.error("API key for remove.bg is not set. Please configure it in the module settings.");
+    return;
+  }
+
+  // Convert the canvas content to a Blob
+  minipaintCanvas.toBlob(async (blob) => {
+    if (!blob) {
+      ui.notifications.error("Failed to create a Blob from the canvas.");
+      return;
+    }
+
+    try {
+      // Step 2: Send the Image to the Remove.bg API
+      const formData = new FormData();
+      formData.append("size", "auto");
+      formData.append("image_file", blob);
+
+      const response = await fetch("https://api.remove.bg/v1.0/removebg", {
+        method: "POST",
+        headers: { "X-Api-Key": apiKey },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`${response.status}: ${response.statusText}`);
+      }
+
+      // Step 3: Receive the Processed Image
+      const arrayBuffer = await response.arrayBuffer();
+      const base64String = btoa(
+        new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), "")
+      );
+
+      // Convert base64 string to an Image object
+      const processedImage = new Image();
+      processedImage.src = `data:image/png;base64,${base64String}`;
+
+      // Step 4: Add the Image as a New Layer in miniPaint
+      processedImage.onload = () => {
+        const Layers = iframe.contentWindow.Layers;
+        const new_layer = {
+          name: "Removed Background Layer",
+          type: 'image',
+          data: processedImage,
+          width: processedImage.naturalWidth || processedImage.width,
+          height: processedImage.naturalHeight || processedImage.height,
+          width_original: processedImage.naturalWidth || processedImage.width,
+          height_original: processedImage.naturalHeight || processedImage.height,
+        };
+        Layers.insert(new_layer);
+
+        ui.notifications.info("Background removed and new layer added successfully.");
+      };
+
+      // Step 5: Fetch the Account Info to Check Remaining Free API Calls
+      const accountInfo = await fetch("https://api.remove.bg/v1.0/account", {
+        method: "GET",
+        headers: { "X-Api-Key": apiKey }
+      });
+
+      if (accountInfo.ok) {
+        const accountData = await accountInfo.json();
+        const remainingFreeCalls = accountData.data.attributes.api.free_calls;
+        ui.notifications.warn(`You have ${remainingFreeCalls} free remove.bg uses left.`);
+      } else {
+        throw new Error("Failed to retrieve account info.");
+      }
+
+    } catch (error) {
+      console.error("Error removing background or fetching account info:", error);
+      ui.notifications.error("Failed to remove the background or fetch remaining uses. Check console for details.");
+    }
+
+  }, "image/png");
+}
+

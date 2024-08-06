@@ -48,13 +48,13 @@ function injectMenuItems() {
       const loadTileMenuItem = iframeDocument.createElement('li');
       loadTileMenuItem.innerHTML = `
         <a id="main_menu_x" role="menuitem" tabindex="-1" aria-haspopup="false" aria-expanded="false" href="javascript:void(0)" data-level="0" onclick="window.parent.loadTile()" title="Load the selected tile into miniPaint">
-          <span class="name trn">Load Tile</span>
+          <i class="fas fa-vector-square"></i> Tile
         </a>
       `;
       const loadTokenMenuItem = iframeDocument.createElement('li');
       loadTokenMenuItem.innerHTML = `
         <a id="main_menu_y" role="menuitem" tabindex="-1" aria-haspopup="false" aria-expanded="false" href="javascript:void(0)" data-level="0" onclick="window.parent.loadToken()" title="Load the selected token into miniPaint">
-          <span class="name trn">Load Token</span>
+          <i class="fas fa-vector-square"></i> Token
         </a>
       `;
 
@@ -62,7 +62,7 @@ function injectMenuItems() {
       const loadBrowseMenuItem = iframeDocument.createElement('li');
       loadBrowseMenuItem.innerHTML = `
         <a id="main_menu_xxx" role="menuitem" tabindex="-1" aria-haspopup="false" aria-expanded="false" href="javascript:void(0)" data-level="0" onclick="window.parent.browseFoundry()" title="Open the Foundry file picker to import an image">
-          <span class="name trn">Browse Foundry</span>
+          <i class="fas fa-folder-open"></i> Foundry
         </a>
       `;
 
@@ -70,60 +70,99 @@ function injectMenuItems() {
       const replaceTileMenuItem = iframeDocument.createElement('li');
       replaceTileMenuItem.innerHTML = `
         <a id="main_menu_xx" role="menuitem" tabindex="-1" aria-haspopup="false" aria-expanded="false" href="javascript:void(0)" data-level="0" onclick="window.parent.replaceTile()" title="Replace the selected tile with the edited image">
-          <span class="name trn">Replace Tile</span>
+          <i class="fas fa-exchange-alt"></i> Tile
         </a>
       `;
       const replaceTokenMenuItem = iframeDocument.createElement('li');
       replaceTokenMenuItem.innerHTML = `
         <a id="main_menu_yy" role="menuitem" tabindex="-1" aria-haspopup="false" aria-expanded="false" href="javascript:void(0)" data-level="0" onclick="window.parent.replaceToken()" title="Replace the selected token with the edited image">
-          <span class="name trn">Replace Token</span>
+          <i class="fas fa-exchange-alt"></i> Token
         </a>
       `;
 
       // Add Save Proto Button
       const saveProtoMenuItem = iframeDocument.createElement('li');
-saveProtoMenuItem.innerHTML = `
-  <a id="main_menu_save_proto" role="menuitem" tabindex="-1" aria-haspopup="false" aria-expanded="false" href="javascript:void(0)" data-level="0" onclick="window.parent.replaceActorTexture('prototypeToken')" title="Save the edited prototype token back to the actor">
-    <span class="name trn">Save Proto</span>
-  </a>
-`;
-const saveAIMGMenuItem = iframeDocument.createElement('li');
-saveAIMGMenuItem.innerHTML = `
-  <a id="main_menu_save_actor_image" role="menuitem" tabindex="-1" aria-haspopup="false" aria-expanded="false" href="javascript:void(0)" data-level="0" onclick="window.parent.replaceActorTexture('img')" title="Save the edited actor image back to the actor">
-    <span class="name trn">Save Actor Image</span>
-  </a>
-`;
-const sendTochat = iframeDocument.createElement('li');
-sendTochat.innerHTML = `
-  <a id="main_menu_zz" role="menuitem" tabindex="-1" aria-haspopup="false" aria-expanded="false" href="javascript:void(0)" data-level="0" onclick="window.parent.showCanvasInImagePopout()" title="Show to players!">
-    <span class="name trn">Popout!</span>
-  </a>
-`;
+      saveProtoMenuItem.innerHTML = `
+        <a id="main_menu_save_proto" role="menuitem" tabindex="-1" aria-haspopup="false" aria-expanded="false" href="javascript:void(0)" data-level="0" onclick="window.parent.replaceActorTexture('prototypeToken')" title="Save the edited prototype token back to the actor">
+          <i class="fas fa-save"></i> Token
+        </a>
+      `;
+      const saveAIMGMenuItem = iframeDocument.createElement('li');
+      saveAIMGMenuItem.innerHTML = `
+        <a id="main_menu_save_actor_image" role="menuitem" tabindex="-1" aria-haspopup="false" aria-expanded="false" href="javascript:void(0)" data-level="0" onclick="window.parent.replaceActorTexture('img')" title="Save the edited actor image back to the actor">
+          <i class="fas fa-save"></i> Portrait
+        </a>
+      `;
+      const sendTochat = iframeDocument.createElement('li');
+      sendTochat.innerHTML = `
+        <a id="main_menu_zz" role="menuitem" tabindex="-1" aria-haspopup="false" aria-expanded="false" href="javascript:void(0)" data-level="0" onclick="window.parent.showCanvasInImagePopout()" title="Show to players!">
+          <i class="fas fa-eye"></i> Pop!
+        </a>
+      `;
 
-const adddot = iframeDocument.createElement('li');
-adddot.innerHTML = `
-  <div style="display: flex;justify-content: center;align-items: center;margin-right: 5px;margin-left: 2px;">•</div>
-`;
-
-// Insert the new menu items at the beginning of the menu bar
-menuBar.insertBefore(adddot, menuBar.firstChild);
-menuBar.insertBefore(sendTochat, menuBar.firstChild);
-menuBar.insertBefore(saveAIMGMenuItem, menuBar.firstChild);
-menuBar.insertBefore(saveProtoMenuItem, menuBar.firstChild);
-menuBar.insertBefore(replaceTokenMenuItem, menuBar.firstChild);
-menuBar.insertBefore(replaceTileMenuItem, menuBar.firstChild);
-menuBar.insertBefore(loadBrowseMenuItem, menuBar.firstChild);
-menuBar.insertBefore(loadTokenMenuItem, menuBar.firstChild);
-menuBar.insertBefore(loadTileMenuItem, menuBar.firstChild);
+      // Insert the new menu items at the beginning of the menu bar
+      menuBar.insertBefore(sendTochat, menuBar.firstChild);
+      menuBar.insertBefore(saveAIMGMenuItem, menuBar.firstChild);
+      menuBar.insertBefore(saveProtoMenuItem, menuBar.firstChild);
+      menuBar.insertBefore(replaceTokenMenuItem, menuBar.firstChild);
+      menuBar.insertBefore(replaceTileMenuItem, menuBar.firstChild);
+      menuBar.insertBefore(loadBrowseMenuItem, menuBar.firstChild);
+      menuBar.insertBefore(loadTokenMenuItem, menuBar.firstChild);
+      menuBar.insertBefore(loadTileMenuItem, menuBar.firstChild);
     }
   }
-
-
-
-
 }
 
 // Attach an event listener to the iframe to run the function once it's loaded
 document.getElementById('myFrame').addEventListener('load', injectMenuItems);
+function replaceElementInIframe() {
+  const iframe = document.getElementById('myFrame');
+  
+  // Check if iframe and its content are accessible
+  if (iframe && iframe.contentWindow) {
+    const iframeDocument = iframe.contentWindow.document;
 
+    // Use querySelector to find the specific element by its ID or class
+    const animationElement = iframeDocument.querySelector('#animation');
+
+    if (animationElement) {
+      // Create a new div element to replace the original span
+      const newDiv = iframeDocument.createElement('div');
+      newDiv.style.width = '65px';
+      newDiv.style.height = '25px';
+      newDiv.style.backgroundColor = 'transparent';
+      newDiv.style.position = 'relative';
+      newDiv.style.display = 'flex';
+      newDiv.style.justifyContent = 'center';
+      newDiv.style.alignItems = 'center';
+      newDiv.style.marginTop = '5px';
+      newDiv.style.marginLeft = '5px';
+      newDiv.style.cursor = 'pointer';
+      newDiv.style.border = '1px solid #ccc'; // Optional border for visibility
+
+      // Add a letter "BG" in the middle of the div
+      const letterBG = iframeDocument.createElement('span');
+      letterBG.textContent = 'BG';
+      letterBG.style.color = '#FFFFFF';
+      letterBG.style.fontSize = '12px';
+      letterBG.style.fontWeight = 'bold';
+      letterBG.style.cursor = 'pointer';
+      letterBG.style.pointerEvents = 'none'; // Prevent text from blocking clicks
+
+      // Append the letter BG to the new div
+      newDiv.appendChild(letterBG);
+
+      // Set the onclick event to run the function removeBackgroundAndAddLayer
+      newDiv.onclick = () => {
+        window.parent.removeBackgroundAndAddLayer();
+      };
+
+      // Replace the old element with the new div
+      animationElement.parentNode.replaceChild(newDiv, animationElement);
+    }
+  }
+}
+
+// Attach an event listener to the iframe to run the function once it's loaded
+document.getElementById('myFrame').addEventListener('load', replaceElementInIframe);
 </script>
