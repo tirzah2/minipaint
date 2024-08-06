@@ -909,3 +909,128 @@ function open_tokenframe() {
       console.error("Error loading JSON file:", ex);
   });
 }
+
+// Function to register the context menu for items
+function registerMiniPaintContextMenu() {
+  Hooks.on('getItemDirectoryEntryContext', (html, options) => {
+    options.push({
+      name: "miniPaint Edit",
+      icon: '<i class="fas fa-paint-brush"></i>',
+      condition: true,
+      callback: async li => {
+        const itemId = li.data("document-id");
+        const item = game.items.get(itemId);
+
+        if (!item) {
+          ui.notifications.error("Could not find the item.");
+          return;
+        }
+
+        const imgPath = item.img;
+
+        if (!imgPath) {
+          ui.notifications.error("Item does not have an associated image.");
+          return;
+        }
+
+        // Open miniPaint and load the image as a new layer
+        await launchMiniPaintForItem(item, imgPath);
+      }
+    });
+  });
+}
+
+// Function to launch miniPaint for editing an item's image
+async function launchMiniPaintForItem(item, imgPath) {
+  // Check if the image path is valid
+  window.minipaintItem = item;
+  if (!imgPath) {
+    ui.notifications.error("Image source not found.");
+    return;
+  }
+
+  // Open miniPaint
+  await openMiniPaint();
+
+  // Wait until miniPaint is loaded and then load the image
+  waitForMiniPaintToLoad(() => {
+    loadItemTexture(imgPath);
+  });
+}
+
+// Function to load the item's image into miniPaint as a new layer
+async function loadItemTexture(textureSrc) {
+  const image = new Image();
+  image.src = textureSrc;
+
+  image.onload = () => {
+    const Layers = document.getElementById('myFrame').contentWindow.Layers;
+    const name = image.src.replace(/^.*[\\\/]/, '');
+    const new_layer = {
+      name: name,
+      type: 'image',
+      data: image,
+      width: image.naturalWidth || image.width,
+      height: image.naturalHeight || image.height,
+      width_original: image.naturalWidth || image.width,
+      height_original: image.naturalHeight || image.height,
+    };
+    Layers.insert(new_layer);
+    console.log("Image added to miniPaint as a new layer.");
+  };
+
+  image.onerror = () => {
+    ui.notifications.error("Failed to load the image.");
+  };
+}
+
+// Register the context menu option
+registerMiniPaintContextMenu();
+
+async function replaceItemTexture() {
+  const iframe = document.getElementById('myFrame');
+  const item = window.minipaintItem;
+
+  if (!item) {
+    ui.notifications.error("No item is currently being edited.");
+    return;
+  }
+
+  // Get the original image path
+  const originalImagePath = item.img;
+  const directoryPath = originalImagePath.substring(0, originalImagePath.lastIndexOf('/'));
+
+  // Convert the miniPaint canvas content to a Blob
+  const iframeDoc = iframe.contentWindow.document;
+  const canvas = iframeDoc.querySelector('#canvas_minipaint');
+
+  if (!canvas) {
+    ui.notifications.error("Canvas not found.");
+    return;
+  }
+
+  canvas.toBlob(async (blob) => {
+    if (!blob) {
+      ui.notifications.error("Failed to create a Blob from the canvas.");
+      return;
+    }
+
+    // Generate a random filename
+    const randomFilename = generateRandomFilename() + ".png";
+
+    // Create a File object from the Blob with the random filename
+    const file = new File([blob], randomFilename, { type: blob.type });
+
+    // Upload the image file to the same directory as the original item image
+    const response = await FilePicker.upload("data", directoryPath, file, {});
+
+    if (response.path) {
+      // Update the item with the new image source
+      await item.update({ img: response.path });
+      ui.notifications.info("Item image replaced successfully.");
+    } else {
+      ui.notifications.error("Failed to upload the modified image.");
+    }
+  }, "image/png");
+}
+

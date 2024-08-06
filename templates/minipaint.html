@@ -126,12 +126,28 @@ if (fileMenu) {
       `;
       savePortraitMenuItem.onclick = () => window.parent.replaceActorTexture('img');
 
+      // Create Save Item menu item
+      const saveItemMenuItem = iframeDocument.createElement('a');
+      saveItemMenuItem.id = "main_menu_save_item_image";
+      saveItemMenuItem.role = "menuitem";
+      saveItemMenuItem.tabindex = "-1";
+      saveItemMenuItem.ariaHaspopup = "false";
+      saveItemMenuItem.href = "javascript:void(0)";
+      saveItemMenuItem.target = "_self";
+      saveItemMenuItem.dataset.level = "1";
+      saveItemMenuItem.dataset.index = "70";
+      saveItemMenuItem.innerHTML = `
+        <span class="name">Save Item</span>
+      `;
+      saveItemMenuItem.onclick = () => window.parent.replaceItemTexture();
+
       // Insert the New Token menu item above the "New" item
       newMenuItem.parentNode.insertBefore(newTokenMenuItem, newMenuItem);
 
       // Insert the new menu items above the "Save As" item
       saveAsMenuItem.parentNode.insertBefore(savePortraitMenuItem, saveAsMenuItem);
       saveAsMenuItem.parentNode.insertBefore(saveTokenMenuItem, savePortraitMenuItem);
+      saveAsMenuItem.parentNode.insertBefore(saveItemMenuItem, saveTokenMenuItem);
     }
   });
 }
@@ -307,6 +323,80 @@ function replaceElementInIframe() {
 
 // Attach an event listener to the iframe to run the function once it's loaded
 document.getElementById('myFrame').addEventListener('load', replaceElementInIframe);
+
+
+function attachDropEventListener() {
+    const iframe = document.getElementById('myFrame');
+
+    if (iframe && iframe.contentWindow) {
+        iframe.contentWindow.document.addEventListener('drop', async function(event) {
+            event.preventDefault();
+            
+            const dataTransfer = event.dataTransfer;
+            const data = dataTransfer.getData("text/plain");
+
+            try {
+                const parsedData = JSON.parse(data);
+
+                if (parsedData && parsedData.type) {
+                    console.log("Dropped FoundryVTT item:", parsedData);
+
+                    // Use the UUID to retrieve the item from Foundry VTT
+                    const uuid = parsedData.uuid;
+                    let item;
+
+                    // Use the UUID to get the item from the FoundryVTT database
+                    item = await fromUuid(uuid);
+
+                    if (item) {
+                        console.log(`Detailed ${parsedData.type} information:`, item);
+                        
+                        // Extract the image path
+                        const imgPath = item.img;
+
+                        // Load the image into miniPaint as a new layer
+                        if (imgPath) {
+                            const iframeDoc = iframe.contentWindow.document;
+                            const miniPaint = iframe.contentWindow;
+                            const Layers = miniPaint.Layers;
+
+                            // Create a new Image object and load it
+                            const image = new Image();
+                            image.src = imgPath;
+
+                            image.onload = () => {
+                                const new_layer = {
+                                    name: item.name,
+                                    type: 'image',
+                                    data: image,
+                                    width: image.naturalWidth || image.width,
+                                    height: image.naturalHeight || image.height,
+                                    width_original: image.naturalWidth || image.width,
+                                    height_original: image.naturalHeight || image.height,
+                                };
+                                Layers.insert(new_layer);
+                                console.log("Image added to canvas as a new layer.");
+                            };
+
+                            image.onerror = () => {
+                                console.error("Failed to load the image.");
+                            };
+                        } else {
+                            console.error("No image path found in the item.");
+                        }
+                    } else {
+                        console.log(`Could not retrieve the detailed information for ${parsedData.type}.`);
+                    }
+                }
+            } catch (err) {
+                console.log("Non-JSON data dropped, likely not a FoundryVTT item.");
+            }
+        });
+    }
+}
+
+// Attach an event listener to the iframe to run the function once it's loaded
+document.getElementById('myFrame').addEventListener('load', attachDropEventListener);
 
 
 </script>
