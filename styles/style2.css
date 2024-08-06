@@ -46,3 +46,31 @@ width: unset !important;
     height: 100%;
     border: 0;
 }
+
+.sidebar_left {
+    width: 75px !important;
+    min-width: 75px !important;
+    align-content: flex-end !important;
+}
+#myFrame .sidebar_left {
+    width: 75px !important;
+    min-width: 75px !important;
+    align-content: flex-end !important;
+}
+
+.minpaint .sidebar_left {
+    width: 75px !important;
+    min-width: 75px !important;
+    align-content: flex-end !important;
+}
+
+.tools_container .sidebar_left {
+    width: 75px !important;
+    min-width: 75px !important;
+    align-content: flex-end !important;
+}
+#tools_container .sidebar_left {
+    width: 75px !important;
+    min-width: 75px !important;
+    align-content: flex-end !important;
+}

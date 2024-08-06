@@ -40,103 +40,7 @@ function injectMenuItems() {
   if (iframe && iframe.contentWindow) {
     const iframeDocument = iframe.contentWindow.document;
 
-    // test
-
-    const fileMenu = iframeDocument.querySelector('#main_menu_0_0');
-    const imageMenu = iframeDocument.querySelector('#main_menu_0_3'); // Adjust ID if necessary
-
-if (imageMenu) {
-  // Wait until the Image dropdown is clicked to expand the items
-  imageMenu.addEventListener('click', () => {
-    const infoMenuItem = iframeDocument.querySelector('#main_menu_1_0'); // Adjust the ID if necessary to target "Information ..."
-
-    if (infoMenuItem) {
-      // Create the Pop! menu item
-      const popMenuItem = iframeDocument.createElement('a');
-      popMenuItem.id = "main_menu_pop";
-      popMenuItem.role = "menuitem";
-      popMenuItem.tabindex = "-1";
-      popMenuItem.ariaHaspopup = "false";
-      popMenuItem.href = "javascript:void(0)";
-      popMenuItem.target = "_self";
-      popMenuItem.dataset.level = "70";
-      popMenuItem.dataset.index = "pop";
-      popMenuItem.innerHTML = `
-        <span class="name">Show Players</span>
-      `;
-      popMenuItem.onclick = () => window.parent.showCanvasInImagePopout();
-
-      // Insert the Pop! menu item above the "Information ..." item
-      infoMenuItem.parentNode.insertBefore(popMenuItem, infoMenuItem);
-    }
-  });
-}
-
-
-
-if (fileMenu) {
-  // Wait until the File dropdown is clicked to expand the items
-  fileMenu.addEventListener('click', () => {
-    const saveAsMenuItem = iframeDocument.querySelector('#main_menu_1_6');
-    const newMenuItem = iframeDocument.querySelector('#main_menu_1_0');
-
-    if (saveAsMenuItem && newMenuItem) {
-      // Create New Token menu item
-      const newTokenMenuItem = iframeDocument.createElement('a');
-      newTokenMenuItem.id = "main_menu_new_token";
-      newTokenMenuItem.role = "menuitem";
-      newTokenMenuItem.tabindex = "-1";
-      newTokenMenuItem.ariaHaspopup = "false";
-      newTokenMenuItem.href = "javascript:void(0)";
-      newTokenMenuItem.target = "_self";
-      newTokenMenuItem.dataset.level = "70";
-      newTokenMenuItem.dataset.index = "5";
-      newTokenMenuItem.innerHTML = `
-        <span class="name">New Token</span>
-      `;
-      newTokenMenuItem.onclick = () => window.parent.open_tokenframe();
-
-      // Create Save Token menu item
-      const saveTokenMenuItem = iframeDocument.createElement('a');
-      saveTokenMenuItem.id = "main_menu_save_proto";
-      saveTokenMenuItem.role = "menuitem";
-      saveTokenMenuItem.tabindex = "-1";
-      saveTokenMenuItem.ariaHaspopup = "false";
-      saveTokenMenuItem.href = "javascript:void(0)";
-      saveTokenMenuItem.target = "_self";
-      saveTokenMenuItem.dataset.level = "1";
-      saveTokenMenuItem.dataset.index = "10";
-      saveTokenMenuItem.innerHTML = `
-        <span class="name">Save Token</span>
-      `;
-      saveTokenMenuItem.onclick = () => window.parent.replaceActorTexture('prototypeToken');
-
-      // Create Save Portrait menu item
-      const savePortraitMenuItem = iframeDocument.createElement('a');
-      savePortraitMenuItem.id = "main_menu_save_actor_image";
-      savePortraitMenuItem.role = "menuitem";
-      savePortraitMenuItem.tabindex = "-1";
-      savePortraitMenuItem.ariaHaspopup = "false";
-      savePortraitMenuItem.href = "javascript:void(0)";
-      savePortraitMenuItem.target = "_self";
-      savePortraitMenuItem.dataset.level = "1";
-      savePortraitMenuItem.dataset.index = "10";
-      savePortraitMenuItem.innerHTML = `
-        <span class="name">Save Portrait</span>
-      `;
-      savePortraitMenuItem.onclick = () => window.parent.replaceActorTexture('img');
-
-      // Insert the New Token menu item above the "New" item
-      newMenuItem.parentNode.insertBefore(newTokenMenuItem, newMenuItem);
-
-      // Insert the new menu items above the "Save As" item
-      saveAsMenuItem.parentNode.insertBefore(savePortraitMenuItem, saveAsMenuItem);
-      saveAsMenuItem.parentNode.insertBefore(saveTokenMenuItem, savePortraitMenuItem);
-    }
-  });
-}
-
-
+    // Find the menu bar element
     const menuBar = iframeDocument.querySelector('.menu_bar');
 
     if (menuBar) {
@@ -153,6 +57,7 @@ if (fileMenu) {
           <i class="fas fa-vector-square"></i> Token
         </a>
       `;
+
       // Browse Foundry Menu Item
       const loadBrowseMenuItem = iframeDocument.createElement('li');
       loadBrowseMenuItem.innerHTML = `
@@ -160,6 +65,7 @@ if (fileMenu) {
           <i class="fas fa-folder-open"></i> Foundry
         </a>
       `;
+
       // Create the Replace Tile and Replace Token menu items
       const replaceTileMenuItem = iframeDocument.createElement('li');
       replaceTileMenuItem.innerHTML = `
@@ -173,6 +79,31 @@ if (fileMenu) {
           <i class="fas fa-exchange-alt"></i> Token
         </a>
       `;
+
+      // Add Save Proto Button
+      const saveProtoMenuItem = iframeDocument.createElement('li');
+      saveProtoMenuItem.innerHTML = `
+        <a id="main_menu_save_proto" role="menuitem" tabindex="-1" aria-haspopup="false" aria-expanded="false" href="javascript:void(0)" data-level="0" onclick="window.parent.replaceActorTexture('prototypeToken')" title="Save the edited prototype token back to the actor">
+          <i class="fas fa-save"></i> Token
+        </a>
+      `;
+      const saveAIMGMenuItem = iframeDocument.createElement('li');
+      saveAIMGMenuItem.innerHTML = `
+        <a id="main_menu_save_actor_image" role="menuitem" tabindex="-1" aria-haspopup="false" aria-expanded="false" href="javascript:void(0)" data-level="0" onclick="window.parent.replaceActorTexture('img')" title="Save the edited actor image back to the actor">
+          <i class="fas fa-save"></i> Portrait
+        </a>
+      `;
+      const sendTochat = iframeDocument.createElement('li');
+      sendTochat.innerHTML = `
+        <a id="main_menu_zz" role="menuitem" tabindex="-1" aria-haspopup="false" aria-expanded="false" href="javascript:void(0)" data-level="0" onclick="window.parent.showCanvasInImagePopout()" title="Show to players!">
+          <i class="fas fa-eye"></i> Pop!
+        </a>
+      `;
+
+      // Insert the new menu items at the beginning of the menu bar
+      menuBar.insertBefore(sendTochat, menuBar.firstChild);
+      menuBar.insertBefore(saveAIMGMenuItem, menuBar.firstChild);
+      menuBar.insertBefore(saveProtoMenuItem, menuBar.firstChild);
       menuBar.insertBefore(replaceTokenMenuItem, menuBar.firstChild);
       menuBar.insertBefore(replaceTileMenuItem, menuBar.firstChild);
       menuBar.insertBefore(loadBrowseMenuItem, menuBar.firstChild);
@@ -212,36 +143,6 @@ function createStyledButton(iframeDocument, text, clickHandler) {
 
   return buttonDiv;
 }
-// Function to create a new button with shared styles
-function createStyledButton(iframeDocument, text, action) {
-  const buttonDiv = iframeDocument.createElement('div');
-  buttonDiv.style.width = '65px';
-  buttonDiv.style.height = '25px';
-  buttonDiv.style.backgroundColor = '#464d4f';
-  buttonDiv.style.position = 'relative';
-  buttonDiv.style.display = 'flex';
-  buttonDiv.style.justifyContent = 'center';
-  buttonDiv.style.alignItems = 'center';
-  buttonDiv.style.marginTop = '5px';
-  buttonDiv.style.marginLeft = '5px';
-  buttonDiv.style.cursor = 'pointer';
-  buttonDiv.style.border = '1px solid #ccc'; // Optional border for visibility
-
-  const buttonText = iframeDocument.createElement('span');
-  buttonText.textContent = text;
-  buttonText.style.color = '#FFFFFF';
-  buttonText.style.fontSize = '12px';
-  buttonText.style.fontWeight = 'bold';
-  buttonText.style.cursor = 'pointer';
-  buttonText.style.pointerEvents = 'none'; // Prevent text from blocking clicks
-
-  buttonDiv.appendChild(buttonText);
-  buttonDiv.onclick = action;
-
-  return buttonDiv;
-}
-
-// Function to replace the element in the iframe
 function replaceElementInIframe() {
   const iframe = document.getElementById('myFrame');
 
@@ -262,6 +163,7 @@ function replaceElementInIframe() {
       bgLabel.style.alignItems = 'center';
       bgLabel.style.marginTop = '5px';
       bgLabel.style.marginLeft = '5px';
+
       bgLabel.textContent = 'BgRemove';
 
       const sketchLabel = iframeDocument.createElement('div');
@@ -274,6 +176,7 @@ function replaceElementInIframe() {
       sketchLabel.style.alignItems = 'center';
       sketchLabel.style.marginTop = '5px';
       sketchLabel.style.marginLeft = '5px';
+
       sketchLabel.textContent = 'StabilityAI';
 
       // Create the "BG" button using the reusable function
@@ -286,21 +189,11 @@ function replaceElementInIframe() {
         window.parent.applySketchEffect();
       });
 
-      // Create and insert the "BG Remove" button using Stability AI
-      const bgRemoveButton = createStyledButton(iframeDocument, 'BG', () => {
-        window.parent.removeBackgroundUsingStabilityAI();
-      });
-      const srButton = createStyledButton(iframeDocument, 'S&R', () => {
-        window.parent.searchAndReplace();
-      });
-
-      // Insert the labels and buttons into the DOM in the correct order
+      // Insert the labels and buttons into the DOM
       animationElement.parentNode.replaceChild(bgLabel, animationElement);
       bgLabel.parentNode.insertBefore(bgButton, bgLabel.nextSibling);
       bgButton.parentNode.insertBefore(sketchLabel, bgButton.nextSibling);
       sketchLabel.parentNode.insertBefore(sketchButton, sketchLabel.nextSibling);
-      sketchButton.parentNode.insertBefore(bgRemoveButton, sketchButton.nextSibling);
-      sketchButton.parentNode.insertBefore(srButton, sketchButton.nextSibling);
     }
   }
 }

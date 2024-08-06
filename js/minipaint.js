@@ -1,4 +1,14 @@
 //seCKsBzKNhggbcp2XPphkYDv
+Hooks.once('init', () => {
+  game.settings.register('minipaint', 'stabilityAiApiKey', {
+    name: "Stability AI API Key",
+    hint: "Enter your Stability AI API key here. You can get your API key from https://platform.stability.ai/. Note that you have 50 free uses per month.",
+    scope: 'client',
+    config: true,
+    type: String,
+    default: "",
+  });
+});
 
 let minipaintDoc;
 Hooks.once('init', () => {
@@ -595,3 +605,307 @@ async function removeBackgroundAndAddLayer() {
   }, "image/png");
 }
 
+
+async function applySketchEffect() {
+  const apiKey = game.settings.get('minipaint', 'stabilityAiApiKey');
+  if (!apiKey) {
+    ui.notifications.error("API key for Stability AI is not set. Please configure it in the module settings.");
+    return;
+  }
+
+  let prompt = await new Promise((resolve) => {
+    new Dialog({
+      title: "Enter Prompt for Sketch Effect",
+      content: `<div><label>Prompt:</label><input type="text" id="sketch-prompt" style="width: 100%;"></div>`,
+      buttons: {
+        ok: {
+          label: "Apply",
+          callback: (html) => resolve(html.find('#sketch-prompt').val())
+        },
+        cancel: {
+          label: "Cancel",
+          callback: () => resolve(null)
+        }
+      },
+      default: "ok",
+    }).render(true);
+  });
+
+  if (!prompt) {
+    ui.notifications.warn("Sketch effect cancelled.");
+    return;
+  }
+
+  try {
+    const iframe = document.getElementById('myFrame');
+    const minipaintCanvas = iframe.contentWindow.document.querySelector('#canvas_minipaint');
+
+    if (!minipaintCanvas) {
+      throw new Error("Could not find the miniPaint canvas.");
+    }
+
+    const blob = await new Promise(resolve => minipaintCanvas.toBlob(resolve, "image/png"));
+    if (!blob) {
+      throw new Error("Failed to create a Blob from the canvas.");
+    }
+
+    const formData = new FormData();
+    formData.append("image", blob);
+    formData.append("prompt", prompt);
+    formData.append("control_strength", "0.7");
+    formData.append("output_format", "png");
+
+    const response = await fetch("https://api.stability.ai/v2beta/stable-image/control/sketch", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Accept": "application/json"
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error(`${response.status}: ${response.statusText}`);
+    }
+
+    const responseData = await response.json();
+    console.log("API Response Data:", responseData);
+
+    // Check if the image is returned in the response
+    if (responseData.image) {
+      const base64String = responseData.image;
+      
+      // Convert the base64 string to an Image object
+      const processedImage = new Image();
+      processedImage.src = `data:image/png;base64,${base64String}`;
+
+      processedImage.onload = () => {
+        const Layers = iframe.contentWindow.Layers;
+        const new_layer = {
+          name: "Sketch Effect Layer",
+          type: 'image',
+          data: processedImage,
+          width: processedImage.naturalWidth || processedImage.width,
+          height: processedImage.naturalHeight || processedImage.height,
+          width_original: processedImage.naturalWidth || processedImage.width,
+          height_original: processedImage.naturalHeight || processedImage.height,
+        };
+        Layers.insert(new_layer);
+
+        ui.notifications.info("Sketch effect applied and new layer added successfully.");
+      };
+    } else {
+      throw new Error("No image returned by the API.");
+    }
+
+  } catch (error) {
+    console.error("Error applying sketch effect:", error);
+    ui.notifications.error("Failed to apply the sketch effect. Check console for details.");
+  }
+}
+async function removeBackgroundUsingStabilityAI() {
+  const iframe = document.getElementById('myFrame');
+  const minipaintCanvas = iframe.contentWindow.document.querySelector('#canvas_minipaint');
+
+  if (!minipaintCanvas) {
+    ui.notifications.error("Could not find the miniPaint canvas.");
+    return;
+  }
+
+  // Convert the canvas content to a Blob
+  minipaintCanvas.toBlob(async (blob) => {
+    if (!blob) {
+      ui.notifications.error("Failed to create a Blob from the canvas.");
+      return;
+    }
+
+    try {
+      const apiKey = game.settings.get('minipaint', 'stabilityAiApiKey');
+
+      if (!apiKey) {
+        ui.notifications.error("API key for Stability AI is not set. Please configure it in the module settings.");
+        return;
+      }
+
+      // Prepare the form data
+      const formData = new FormData();
+      formData.append("image", blob);
+      formData.append("output_format", "png"); // You can change this to "webp" if needed
+
+      // Send the request to the Stability AI API
+      const response = await fetch("https://api.stability.ai/v2beta/stable-image/edit/remove-background", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+          "Accept": "application/json",
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`${response.status}: ${response.statusText}`);
+      }
+
+      const responseData = await response.json();
+
+      if (!responseData.image) {
+        throw new Error("No image returned by the API.");
+      }
+
+      // Convert the base64 string to an Image object
+      const processedImage = new Image();
+      processedImage.src = `data:image/png;base64,${responseData.image}`;
+
+      // Add the processed image as a new layer
+      processedImage.onload = () => {
+        const Layers = iframe.contentWindow.Layers;
+        const new_layer = {
+          name: "Removed Background Layer",
+          type: 'image',
+          data: processedImage,
+          width: processedImage.naturalWidth || processedImage.width,
+          height: processedImage.naturalHeight || processedImage.height,
+          width_original: processedImage.naturalWidth || processedImage.width,
+          height_original: processedImage.naturalHeight || processedImage.height,
+        };
+        Layers.insert(new_layer);
+
+        ui.notifications.info("Background removed and new layer added successfully.");
+      };
+
+    } catch (error) {
+      console.error("Error applying background removal effect:", error);
+      ui.notifications.error("Failed to remove the background. Check console for details.");
+    }
+  }, "image/png");
+}
+
+async function searchAndReplace() {
+  const iframe = document.getElementById('myFrame');
+  const minipaintCanvas = iframe.contentWindow.document.querySelector('#canvas_minipaint');
+
+  if (!minipaintCanvas) {
+    ui.notifications.error("Could not find the miniPaint canvas.");
+    return;
+  }
+
+  const { prompt, searchPrompt } = await new Promise((resolve) => {
+    let formContent = `
+      <div>
+        <label for="promptInput" style="display: block; margin-bottom: 5px;">What do you want to create in the image?</label>
+        <input type="text" id="promptInput" style="width: 100%; margin-bottom: 15px;" />
+        <label for="searchPromptInput" style="display: block; margin-bottom: 5px;">What do you want to replace in the image?</label>
+        <input type="text" id="searchPromptInput" style="width: 100%;" />
+      </div>
+    `;
+
+    new Dialog({
+      title: "Search and Replace",
+      content: formContent,
+      buttons: {
+        yes: {
+          label: "OK",
+          callback: (html) => resolve({
+            prompt: html.find('#promptInput').val(),
+            searchPrompt: html.find('#searchPromptInput').val(),
+          }),
+        },
+        no: {
+          label: "Cancel",
+          callback: () => resolve({ prompt: null, searchPrompt: null }),
+        },
+      },
+      default: "yes",
+    }).render(true);
+  });
+
+  if (!prompt || !searchPrompt) {
+    ui.notifications.error("Prompt or search prompt cannot be empty.");
+    return;
+  }
+
+  // Convert the canvas content to a Blob
+  minipaintCanvas.toBlob(async (blob) => {
+    if (!blob) {
+      ui.notifications.error("Failed to create a Blob from the canvas.");
+      return;
+    }
+
+    try {
+      const apiKey = game.settings.get('minipaint', 'stabilityAiApiKey');
+
+      if (!apiKey) {
+        ui.notifications.error("API key for Stability AI is not set. Please configure it in the module settings.");
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("image", blob);
+      formData.append("prompt", prompt);
+      formData.append("search_prompt", searchPrompt);
+      formData.append("output_format", "png"); // You can change this to "webp" if needed
+
+      // Send the request to the Stability AI API
+      const response = await fetch("https://api.stability.ai/v2beta/stable-image/edit/search-and-replace", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+          "Accept": "application/json",
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`${response.status}: ${response.statusText}`);
+      }
+
+      const responseData = await response.json();
+
+      if (!responseData.image) {
+        throw new Error("No image returned by the API.");
+      }
+
+      // Convert the base64 string to an Image object
+      const processedImage = new Image();
+      processedImage.src = `data:image/png;base64,${responseData.image}`;
+
+      // Add the processed image as a new layer
+      processedImage.onload = () => {
+        const Layers = iframe.contentWindow.Layers;
+        const new_layer = {
+          name: "Search and Replace Layer",
+          type: 'image',
+          data: processedImage,
+          width: processedImage.naturalWidth || processedImage.width,
+          height: processedImage.naturalHeight || processedImage.height,
+          width_original: processedImage.naturalWidth || processedImage.width,
+          height_original: processedImage.naturalHeight || processedImage.height,
+        };
+        Layers.insert(new_layer);
+
+        ui.notifications.info("Search and Replace applied and new layer added successfully.");
+      };
+
+    } catch (error) {
+      console.error("Error applying search and replace effect:", error);
+      ui.notifications.error("Failed to apply the search and replace effect. Check console for details.");
+    }
+  }, "image/png");
+}
+function open_tokenframe() {
+  // Access the miniPaint iframe and its FileOpen function
+  var miniPaint = document.getElementById('myFrame').contentWindow;
+  var miniPaint_FileOpen = miniPaint.FileOpen;
+
+  // Fetch the JSON file
+  window.fetch("modules/minipaint/images/tokenframe.json").then(function(response) {
+      return response.json();
+  }).then(function(json) {
+      // Load the JSON data into miniPaint
+      miniPaint_FileOpen.load_json(json, false);
+      console.log("JSON file loaded successfully.");
+  }).catch(function(ex) {
+      alert('Sorry, image could not be loaded.');
+      console.error("Error loading JSON file:", ex);
+  });
+}
