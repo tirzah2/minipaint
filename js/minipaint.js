@@ -909,7 +909,39 @@ function open_tokenframe() {
       console.error("Error loading JSON file:", ex);
   });
 }
+function openFrame1() {
+  openFrame('modules/minipaint/images/ringsimple1.json');
+}
 
+function openFrame2() {
+  openFrame('modules/minipaint/images/ringsimple2.json');
+}
+
+function openFrame3() {
+  openFrame('modules/minipaint/images/ringsimple3.json');
+}
+function openFrame4() {
+  openFrame('modules/minipaint/images/tokenhead.json');
+}
+
+// Generic function to open any frame JSON file
+function openFrame(jsonPath) {
+  // Access the miniPaint iframe and its FileOpen function
+  var miniPaint = document.getElementById('myFrame').contentWindow;
+  var miniPaint_FileOpen = miniPaint.FileOpen;
+
+  // Fetch the JSON file
+  window.fetch(jsonPath).then(function(response) {
+      return response.json();
+  }).then(function(json) {
+      // Load the JSON data into miniPaint
+      miniPaint_FileOpen.load_json(json, false);
+      console.log("JSON file loaded successfully.");
+  }).catch(function(ex) {
+      alert('Sorry, image could not be loaded.');
+      console.error("Error loading JSON file:", ex);
+  });
+}
 // Function to register the context menu for items
 function registerMiniPaintContextMenu() {
   Hooks.on('getItemDirectoryEntryContext', (html, options) => {
@@ -1034,3 +1066,212 @@ async function replaceItemTexture() {
   }, "image/png");
 }
 
+async function applyInpaintToken() {
+  const apiKey = game.settings.get('minipaint', 'stabilityAiApiKey');
+
+  if (!apiKey) {
+    ui.notifications.error("API key for Stability AI is not set. Please configure it in the module settings.");
+    return;
+  }
+
+  const prompt = await new Promise((resolve) => {
+    new Dialog({
+      title: "Inpaint Prompt",
+      content: `
+        <form>
+          <div class="form-group">
+            <label>Describe your character (it will create a front portrait zoomed in on the face)</label>
+            <input type="text" name="prompt" placeholder="a female elf wizard wearing a golden blue dress, she has curly red hair" required>
+          </div>
+        </form>
+      `,
+      buttons: {
+        ok: {
+          label: "Apply",
+          callback: (html) => resolve(html.find('input[name="prompt"]').val())
+        },
+        cancel: {
+          label: "Cancel",
+          callback: () => resolve(null)
+        }
+      },
+      default: "ok"
+    }).render(true);
+  });
+
+  if (!prompt) {
+    return;
+  }
+
+  // Prepend and append the required text to the user's prompt
+  const fullPrompt = `the zoomed-in front face drawing portrait of ${prompt}, the head going over the token frame ring`;
+
+  const iframe = document.getElementById('myFrame');
+  const minipaintCanvas = iframe.contentWindow.document.querySelector('#canvas_minipaint');
+
+  if (!minipaintCanvas) {
+    ui.notifications.error("Could not find the miniPaint canvas.");
+    return;
+  }
+
+  // Convert the canvas content to a Blob
+  minipaintCanvas.toBlob(async (blob) => {
+    if (!blob) {
+      ui.notifications.error("Failed to create a Blob from the canvas.");
+      return;
+    }
+
+    try {
+      // Prepare the FormData
+      const formData = new FormData();
+      formData.append("image", blob); // Image to be inpainted
+      formData.append("prompt", fullPrompt); // Inpainting prompt with added text
+
+      const response = await fetch("https://api.stability.ai/v2beta/stable-image/edit/inpaint", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+          "Accept": "application/json"
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`${response.status}: ${response.statusText}`);
+      }
+
+      const responseData = await response.json();
+
+      if (responseData.image) {
+        const processedImage = new Image();
+        processedImage.src = `data:image/png;base64,${responseData.image}`;
+
+        processedImage.onload = () => {
+          const Layers = iframe.contentWindow.Layers;
+          const new_layer = {
+            name: "Inpainted Layer",
+            type: 'image',
+            data: processedImage,
+            width: processedImage.naturalWidth || processedImage.width,
+            height: processedImage.naturalHeight || processedImage.height,
+            width_original: processedImage.naturalWidth || processedImage.width,
+            height_original: processedImage.naturalHeight || processedImage.height,
+          };
+          Layers.insert(new_layer);
+          ui.notifications.info("Inpainting applied and new layer added successfully.");
+        };
+      } else {
+        throw new Error("No image returned by the API.");
+      }
+    } catch (error) {
+      console.error("Error applying inpaint effect:", error);
+      ui.notifications.error("Failed to apply the inpaint effect. Check console for details.");
+    }
+
+  }, "image/png"); // Ensure the image is in PNG format
+}
+
+async function applyInpaintRing() {
+  const apiKey = game.settings.get('minipaint', 'stabilityAiApiKey');
+
+  if (!apiKey) {
+    ui.notifications.error("API key for Stability AI is not set. Please configure it in the module settings.");
+    return;
+  }
+
+  const prompt = await new Promise((resolve) => {
+    new Dialog({
+      title: "Inpaint Prompt",
+      content: `
+        <form>
+          <div class="form-group">
+            <label>Describe your token ring</label>
+            <input type="text" name="prompt" placeholder="red roses intertwined around vines" required>
+          </div>
+        </form>
+      `,
+      buttons: {
+        ok: {
+          label: "Apply",
+          callback: (html) => resolve(html.find('input[name="prompt"]').val())
+        },
+        cancel: {
+          label: "Cancel",
+          callback: () => resolve(null)
+        }
+      },
+      default: "ok"
+    }).render(true);
+  });
+
+  if (!prompt) {
+    return;
+  }
+
+  // Prepend and append the required text to the user's prompt
+  const fullPrompt = `a round token ring for roleplaying vtt game representing ${prompt}`;
+
+  const iframe = document.getElementById('myFrame');
+  const minipaintCanvas = iframe.contentWindow.document.querySelector('#canvas_minipaint');
+
+  if (!minipaintCanvas) {
+    ui.notifications.error("Could not find the miniPaint canvas.");
+    return;
+  }
+
+  // Convert the canvas content to a Blob
+  minipaintCanvas.toBlob(async (blob) => {
+    if (!blob) {
+      ui.notifications.error("Failed to create a Blob from the canvas.");
+      return;
+    }
+
+    try {
+      // Prepare the FormData
+      const formData = new FormData();
+      formData.append("image", blob); // Image to be inpainted
+      formData.append("prompt", fullPrompt); // Inpainting prompt with added text
+
+      const response = await fetch("https://api.stability.ai/v2beta/stable-image/edit/inpaint", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+          "Accept": "application/json"
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`${response.status}: ${response.statusText}`);
+      }
+
+      const responseData = await response.json();
+
+      if (responseData.image) {
+        const processedImage = new Image();
+        processedImage.src = `data:image/png;base64,${responseData.image}`;
+
+        processedImage.onload = () => {
+          const Layers = iframe.contentWindow.Layers;
+          const new_layer = {
+            name: "Inpainted Layer",
+            type: 'image',
+            data: processedImage,
+            width: processedImage.naturalWidth || processedImage.width,
+            height: processedImage.naturalHeight || processedImage.height,
+            width_original: processedImage.naturalWidth || processedImage.width,
+            height_original: processedImage.naturalHeight || processedImage.height,
+          };
+          Layers.insert(new_layer);
+          ui.notifications.info("Inpainting applied and new layer added successfully.");
+        };
+      } else {
+        throw new Error("No image returned by the API.");
+      }
+    } catch (error) {
+      console.error("Error applying inpaint effect:", error);
+      ui.notifications.error("Failed to apply the inpaint effect. Check console for details.");
+    }
+
+  }, "image/png"); // Ensure the image is in PNG format
+}

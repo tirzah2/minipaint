@@ -92,7 +92,7 @@ if (fileMenu) {
       newTokenMenuItem.dataset.level = "70";
       newTokenMenuItem.dataset.index = "5";
       newTokenMenuItem.innerHTML = `
-        <span class="name">New Token</span>
+        <span class="name">New Simple Token</span>
       `;
       newTokenMenuItem.onclick = () => window.parent.open_tokenframe();
 
@@ -141,8 +141,91 @@ if (fileMenu) {
       `;
       saveItemMenuItem.onclick = () => window.parent.replaceItemTexture();
 
-      // Insert the New Token menu item above the "New" item
-      newMenuItem.parentNode.insertBefore(newTokenMenuItem, newMenuItem);
+      //test
+      const newFrameMenuItem = iframeDocument.createElement('a');
+      newFrameMenuItem.id = "main_menu_new_frame";
+      newFrameMenuItem.role = "menuitem";
+      newFrameMenuItem.tabindex = "-1";
+      newFrameMenuItem.ariaHaspopup = "true";
+      newFrameMenuItem.ariaExpanded = "false";
+      newFrameMenuItem.href = "javascript:void(0)";
+      newFrameMenuItem.target = "_self";
+      newFrameMenuItem.dataset.level = "71";
+      newFrameMenuItem.dataset.index = "6";
+      newFrameMenuItem.innerHTML = `
+        <span class="name"><- Templates</span>
+      `;
+
+      // Create the submenu (dropdown) for the New Frame options
+      const subMenu = iframeDocument.createElement('ul');
+      subMenu.className = 'menu_dropdown';
+      subMenu.role = 'menu';
+      subMenu.style.display = 'none'; // Hidden by default
+      subMenu.style.position = 'absolute';
+      subMenu.style.zIndex = '1000';
+      subMenu.style.left = '163px'; // Adjusted left position
+      subMenu.style.top = '30px'; // Adjusted top position
+
+      // Create Frame 1, Frame 2, and Frame 3 menu items
+      ['Frame 1', 'Frame 2', 'Frame 3','Token 1'].forEach((frame, index) => {
+  const frameItem = iframeDocument.createElement('li');
+  frameItem.innerHTML = `
+    <a href="javascript:void(0)" role="menuitem" tabindex="-1" data-index="frame_${index + 1}">
+      ${frame}
+    </a>
+  `;
+
+  // Attach the click event listener to each frame item
+  frameItem.onclick = () => {
+    switch (index) {
+      case 0:
+        window.parent.openFrame1();
+        break;
+      case 1:
+        window.parent.openFrame2();
+        break;
+      case 2:
+        window.parent.openFrame3();
+        break;
+      case 3:
+        window.parent.openFrame4();
+        break;
+    }
+    subMenu.style.display = 'none';
+    newFrameMenuItem.ariaExpanded = 'false';
+  };
+
+  // Append frame item to the submenu
+  subMenu.appendChild(frameItem);
+});
+
+      // Toggle submenu visibility on click
+      newFrameMenuItem.onclick = (e) => {
+        e.stopPropagation(); // Prevent the click event from bubbling up
+        const isVisible = subMenu.style.display === 'block';
+        subMenu.style.display = isVisible ? 'none' : 'block';
+        newFrameMenuItem.ariaExpanded = !isVisible;
+      };
+
+      // Hide the submenu if clicking outside
+      iframeDocument.addEventListener('click', (e) => {
+        if (subMenu.style.display === 'block' && !subMenu.contains(e.target)) {
+          subMenu.style.display = 'none';
+          newFrameMenuItem.ariaExpanded = 'false';
+        }
+      });
+
+      // Insert the New Frame menu item above the "New" item
+      newMenuItem.parentNode.insertBefore(newFrameMenuItem, newMenuItem);
+
+      // Insert the submenu inside the "Main Menu" structure
+      const mainMenu = iframeDocument.querySelector('.main_menu');
+      if (mainMenu) {
+        mainMenu.appendChild(subMenu);
+      }
+
+      // Insert the New Simple Token menu item above the "New" item
+      newMenuItem.parentNode.insertBefore(newTokenMenuItem, newFrameMenuItem);
 
       // Insert the new menu items above the "Save As" item
       saveAsMenuItem.parentNode.insertBefore(savePortraitMenuItem, saveAsMenuItem);
@@ -294,21 +377,34 @@ function replaceElementInIframe() {
 
       // Create the "BG" button using the reusable function
       const bgButton = createStyledButton(iframeDocument, 'BG', () => {
-        window.parent.removeBackgroundAndAddLayer();
-      });
+  window.parent.removeBackgroundAndAddLayer();
+});
+bgButton.title = "Remove the background of the image using removeBG.";
 
-      // Create the "Sketch" button using the reusable function
-      const sketchButton = createStyledButton(iframeDocument, 'Sketch', () => {
-        window.parent.applySketchEffect();
-      });
+const sketchButton = createStyledButton(iframeDocument, 'Sketch', () => {
+  window.parent.applySketchEffect();
+});
+sketchButton.title = "Transform your sketch into a real image using Stability AI.";
 
-      // Create and insert the "BG Remove" button using Stability AI
-      const bgRemoveButton = createStyledButton(iframeDocument, 'BG', () => {
-        window.parent.removeBackgroundUsingStabilityAI();
-      });
-      const srButton = createStyledButton(iframeDocument, 'S&R', () => {
-        window.parent.searchAndReplace();
-      });
+const bgRemoveButton = createStyledButton(iframeDocument, 'BG', () => {
+  window.parent.removeBackgroundUsingStabilityAI();
+});
+bgRemoveButton.title = "Remove the background using Stability AI's API.";
+
+const srButton = createStyledButton(iframeDocument, 'S&R', () => {
+  window.parent.searchAndReplace();
+});
+srButton.title = "Search and replace specific elements in the image using Stability AI.";
+
+const genRing = createStyledButton(iframeDocument, 'GenRing', () => {
+  window.parent.applyInpaintRing();
+});
+genRing.title = "Generate a token ring replacing the transparent area.";
+
+const genToken = createStyledButton(iframeDocument, 'GenToken', () => {
+  window.parent.applyInpaintToken();
+});
+genToken.title = "Generate and apply a token inside of the transparent area.";
 
       // Insert the labels and buttons into the DOM in the correct order
       animationElement.parentNode.replaceChild(bgLabel, animationElement);
@@ -317,6 +413,8 @@ function replaceElementInIframe() {
       sketchLabel.parentNode.insertBefore(sketchButton, sketchLabel.nextSibling);
       sketchButton.parentNode.insertBefore(bgRemoveButton, sketchButton.nextSibling);
       sketchButton.parentNode.insertBefore(srButton, sketchButton.nextSibling);
+      srButton.parentNode.insertBefore(genRing, sketchButton.nextSibling);
+      genRing.parentNode.insertBefore(genToken, sketchButton.nextSibling);
     }
   }
 }
