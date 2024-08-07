@@ -26,7 +26,7 @@
   "media":[
 		{
 			"type":"cover",
-			"url":"https://github.com/tirzah2/minipaint/blob/main/images/cover.png"
+			"url":"https://raw.githubusercontent.com/tirzah2/minipaint/main/images/cover.png"
 		}
 	],
   "packs": [],
