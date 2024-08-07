@@ -166,10 +166,51 @@ async function replaceActorTexture(type) {
       return;
     }
 
-    const directoryPath = type === 'prototypeToken'
-      ? minipaintDoc.prototypeToken.texture.src.substring(0, minipaintDoc.prototypeToken.texture.src.lastIndexOf("/"))
-      : minipaintDoc.img.substring(0, minipaintDoc.img.lastIndexOf("/"));
-      
+    let originalPath = type === 'prototypeToken'
+      ? minipaintDoc.prototypeToken.texture.src
+      : minipaintDoc.img;
+
+    let directoryPath;
+
+    if (originalPath) {
+      directoryPath = originalPath.substring(0, originalPath.lastIndexOf("/"));
+
+      // Check if the directory is writable (user data) or not (core data)
+      try {
+        await FilePicker.browse("data", directoryPath);
+      } catch (error) {
+        console.warn("Directory is not writable, switching to miniMapNewTiles.");
+        directoryPath = "miniMapNewTiles";
+
+        // Check if the fallback directory exists, and create it if it doesn't
+        try {
+          await FilePicker.browse("data", directoryPath);
+        } catch (error) {
+          if (error.message.includes("does not exist")) {
+            await FilePicker.createDirectory("data", directoryPath);
+          } else {
+            ui.notifications.error("Error accessing or creating the fallback directory.");
+            return;
+          }
+        }
+      }
+    } else {
+      // If originalPath is null, set the directory to 'miniMapNewTiles' in the root
+      directoryPath = "miniMapNewTiles";
+
+      // Check if the directory exists, and create it if it doesn't
+      try {
+        await FilePicker.browse("data", directoryPath);
+      } catch (error) {
+        if (error.message.includes("does not exist")) {
+          await FilePicker.createDirectory("data", directoryPath);
+        } else {
+          ui.notifications.error("Error accessing or creating the directory.");
+          return;
+        }
+      }
+    }
+
     const randomFilename = generateRandomFilename() + ".png";
 
     const file = new File([blob], randomFilename, { type: blob.type });
@@ -181,12 +222,18 @@ async function replaceActorTexture(type) {
       } else {
         await minipaintDoc.update({ "img": response.path });
       }
-     // ui.notifications.info("Image updated successfully.");
+      // ui.notifications.info("Image updated successfully.");
     } else {
       ui.notifications.error("Failed to upload the modified image.");
     }
   }, "image/png");
 }
+
+// Function to generate a random filename
+function generateRandomFilename() {
+  return Math.random().toString(36).substring(2, 12);
+}
+
 
 // Utility function to wait until miniPaint is fully loaded
 function waitForMiniPaintToLoad(callback) {
