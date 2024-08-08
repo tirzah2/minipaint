@@ -79,6 +79,7 @@ if (fileMenu) {
   fileMenu.addEventListener('click', () => {
     const saveAsMenuItem = iframeDocument.querySelector('#main_menu_1_6');
     const newMenuItem = iframeDocument.querySelector('#main_menu_1_0');
+console.log(window.tidyType);
 
     if (saveAsMenuItem && newMenuItem) {
       // Create New Token menu item
@@ -229,6 +230,21 @@ if (fileMenu) {
 
       // Insert the new menu items above the "Save As" item
       saveAsMenuItem.parentNode.insertBefore(savePortraitMenuItem, saveAsMenuItem);
+      if (window.parent.tidyType === 'img') {
+    savePortraitMenuItem.style.backgroundColor = 'darkgreen';
+    savePortraitMenuItem.style.border = '2px solid white';
+    savePortraitMenuItem.style.color = 'lightgreen';
+    //saveTokenMenuItem.style.display = 'none'; // Hide Save Token button
+} else if (window.parent.tidyType === 'prototypeToken') {
+    saveTokenMenuItem.style.backgroundColor = 'darkgreen';
+    saveTokenMenuItem.style.border = '2px solid white';
+    saveTokenMenuItem.style.color = 'lightgreen';
+    //savePortraitMenuItem.style.display = 'none'; // Hide Save Portrait button
+} else {
+    // Hide both buttons if tidyType is null, undefined, or any other value
+    saveTokenMenuItem.style.display = 'none';
+    savePortraitMenuItem.style.display = 'none';
+}
       saveAsMenuItem.parentNode.insertBefore(saveTokenMenuItem, savePortraitMenuItem);
       saveAsMenuItem.parentNode.insertBefore(saveItemMenuItem, saveTokenMenuItem);
     }
