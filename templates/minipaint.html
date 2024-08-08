@@ -236,48 +236,49 @@ if (fileMenu) {
 }
 
 
-    const menuBar = iframeDocument.querySelector('.menu_bar');
+   const menuBar = iframeDocument.querySelector('.menu_bar');
 
-    if (menuBar) {
-      // Create the Load Tile and Load Token menu items
-      const loadTileMenuItem = iframeDocument.createElement('li');
-      loadTileMenuItem.innerHTML = `
-        <a id="main_menu_x" role="menuitem" tabindex="-1" aria-haspopup="false" aria-expanded="false" href="javascript:void(0)" data-level="0" onclick="window.parent.loadTile()" title="Load the selected tile into miniPaint">
-          <i class="fas fa-vector-square"></i> Tile
+   if (menuBar) {
+      // Create Load Selected menu item
+      const loadSelectedMenuItem = iframeDocument.createElement('li');
+      loadSelectedMenuItem.innerHTML = `
+        <a id="main_menu_load_selected" role="menuitem" tabindex="-1" aria-haspopup="false" aria-expanded="false" href="javascript:void(0)" data-level="0" onclick="window.parent.loadSelected()" title="Load the selected token or tile into miniPaint">
+          Load Selected
         </a>
       `;
-      const loadTokenMenuItem = iframeDocument.createElement('li');
-      loadTokenMenuItem.innerHTML = `
-        <a id="main_menu_y" role="menuitem" tabindex="-1" aria-haspopup="false" aria-expanded="false" href="javascript:void(0)" data-level="0" onclick="window.parent.loadToken()" title="Load the selected token into miniPaint">
-          <i class="fas fa-vector-square"></i> Token
+
+      // Create Replace Selected menu item
+      const replaceSelectedMenuItem = iframeDocument.createElement('li');
+      replaceSelectedMenuItem.innerHTML = `
+        <a id="main_menu_replace_selected" role="menuitem" tabindex="-1" aria-haspopup="false" aria-expanded="false" href="javascript:void(0)" data-level="0" onclick="window.parent.replaceSelected()" title="Replace the selected token or tile with the edited image">
+          Replace Selected
         </a>
       `;
+
       // Browse Foundry Menu Item
       const loadBrowseMenuItem = iframeDocument.createElement('li');
       loadBrowseMenuItem.innerHTML = `
-        <a id="main_menu_xxx" role="menuitem" tabindex="-1" aria-haspopup="false" aria-expanded="false" href="javascript:void(0)" data-level="0" onclick="window.parent.browseFoundry()" title="Open the Foundry file picker to import an image">
+        <a id="main_menu_browse_foundry" role="menuitem" tabindex="-1" aria-haspopup="false" aria-expanded="false" href="javascript:void(0)" data-level="0" onclick="window.parent.browseFoundry()" title="Open the Foundry file picker to import an image">
           <i class="fas fa-folder-open"></i> Foundry
         </a>
       `;
-      // Create the Replace Tile and Replace Token menu items
-      const replaceTileMenuItem = iframeDocument.createElement('li');
-      replaceTileMenuItem.innerHTML = `
-        <a id="main_menu_xx" role="menuitem" tabindex="-1" aria-haspopup="false" aria-expanded="false" href="javascript:void(0)" data-level="0" onclick="window.parent.replaceTile()" title="Replace the selected tile with the edited image">
-          <i class="fas fa-exchange-alt"></i> Tile
+
+      // Save Foundry Menu Item
+      const saveFoundryMenuItem = iframeDocument.createElement('li');
+      saveFoundryMenuItem.innerHTML = `
+        <a id="main_menu_save_foundry" role="menuitem" tabindex="-1" aria-haspopup="false" aria-expanded="false" href="javascript:void(0)" data-level="0" onclick="window.parent.saveFoundry()" title="Save the edited image back to Foundry">
+         <i class="fas fa-save"></i> Foundry
         </a>
       `;
-      const replaceTokenMenuItem = iframeDocument.createElement('li');
-      replaceTokenMenuItem.innerHTML = `
-        <a id="main_menu_yy" role="menuitem" tabindex="-1" aria-haspopup="false" aria-expanded="false" href="javascript:void(0)" data-level="0" onclick="window.parent.replaceToken()" title="Replace the selected token with the edited image">
-          <i class="fas fa-exchange-alt"></i> Token
-        </a>
-      `;
-      menuBar.insertBefore(replaceTokenMenuItem, menuBar.firstChild);
-      menuBar.insertBefore(replaceTileMenuItem, menuBar.firstChild);
-      menuBar.insertBefore(loadBrowseMenuItem, menuBar.firstChild);
-      menuBar.insertBefore(loadTokenMenuItem, menuBar.firstChild);
-      menuBar.insertBefore(loadTileMenuItem, menuBar.firstChild);
+
+      // Insert menu items into the menu bar in the correct order
+      menuBar.insertBefore(loadSelectedMenuItem, menuBar.firstChild);
+      menuBar.insertBefore(replaceSelectedMenuItem, loadSelectedMenuItem.nextSibling);
+      menuBar.insertBefore(loadBrowseMenuItem, replaceSelectedMenuItem.nextSibling);
+      menuBar.insertBefore(saveFoundryMenuItem, loadBrowseMenuItem.nextSibling);
     }
+
+
   }
 }
 
