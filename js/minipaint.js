@@ -9,7 +9,6 @@ Hooks.once('init', () => {
     default: "",
   });
 });
-
 let minipaintDoc;
 Hooks.once('init', () => {
   game.settings.register('minipaint', 'removeBgApiKey', {
@@ -95,7 +94,6 @@ async function launchMiniPaintForActor(minipaintDoc, type) {
     highlightRelevantButton(type); // Highlight the relevant button
   });
 }
-
 // Function to highlight the relevant button
 function highlightRelevantButton(type) {
   const iframe = document.getElementById('myFrame');
@@ -116,125 +114,10 @@ function highlightRelevantButton(type) {
     }
   }
 }
-
-// Function to load the actor's prototype token or image into miniPaint
-async function loadActorTexture(textureSrc) {
-  const image = new Image();
-  image.src = textureSrc;
-
-  image.onload = () => {
-    const Layers = document.getElementById('myFrame').contentWindow.Layers;
-    const name = image.src.replace(/^.*[\\\/]/, '');
-    const new_layer = {
-      name: name,
-      type: 'image',
-      data: image,
-      width: image.naturalWidth || image.width,
-      height: image.naturalHeight || image.height,
-      width_original: image.naturalWidth || image.width,
-      height_original: image.naturalHeight || image.height,
-    };
-    Layers.insert(new_layer);
-  };
-
-  image.onerror = () => {
-    ui.notifications.error("Failed to load the image.");
-  };
-}
-
-// Function to save the modified image back to the actor's prototype token or actor image
-async function replaceActorTexture(type) {
-  // Use the global minipaintDoc variable
-  const minipaintDoc = window.parent.minipaintDoc;
-
-  if (!minipaintDoc) {
-    ui.notifications.error("No actor document found.");
-    return;
-  }
-
-  const iframe = document.getElementById('myFrame');
-  const minipaintCanvas = iframe.contentWindow.document.querySelector('#canvas_minipaint');
-
-  if (!minipaintCanvas) {
-    ui.notifications.error("Could not find the miniPaint canvas.");
-    return;
-  }
-
-  minipaintCanvas.toBlob(async (blob) => {
-    if (!blob) {
-      ui.notifications.error("Failed to create a Blob from the canvas.");
-      return;
-    }
-
-    let originalPath = type === 'prototypeToken'
-      ? minipaintDoc.prototypeToken.texture.src
-      : minipaintDoc.img;
-
-    let directoryPath;
-
-    if (originalPath) {
-      directoryPath = originalPath.substring(0, originalPath.lastIndexOf("/"));
-
-      // Check if the directory is writable (user data) or not (core data)
-      try {
-        await FilePicker.browse("data", directoryPath);
-      } catch (error) {
-        console.warn("Directory is not writable, switching to miniMapNewTiles.");
-        directoryPath = "miniMapNewTiles";
-
-        // Check if the fallback directory exists, and create it if it doesn't
-        try {
-          await FilePicker.browse("data", directoryPath);
-        } catch (error) {
-          if (error.message.includes("does not exist")) {
-            await FilePicker.createDirectory("data", directoryPath);
-          } else {
-            ui.notifications.error("Error accessing or creating the fallback directory.");
-            return;
-          }
-        }
-      }
-    } else {
-      // If originalPath is null, set the directory to 'miniMapNewTiles' in the root
-      directoryPath = "miniMapNewTiles";
-
-      // Check if the directory exists, and create it if it doesn't
-      try {
-        await FilePicker.browse("data", directoryPath);
-      } catch (error) {
-        if (error.message.includes("does not exist")) {
-          await FilePicker.createDirectory("data", directoryPath);
-        } else {
-          ui.notifications.error("Error accessing or creating the directory.");
-          return;
-        }
-      }
-    }
-
-    const randomFilename = generateRandomFilename() + ".png";
-
-    const file = new File([blob], randomFilename, { type: blob.type });
-    const response = await FilePicker.upload("data", directoryPath, file, {});
-
-    if (response.path) {
-      if (type === 'prototypeToken') {
-        await minipaintDoc.update({ "prototypeToken.texture.src": response.path });
-      } else {
-        await minipaintDoc.update({ "img": response.path });
-      }
-      // ui.notifications.info("Image updated successfully.");
-    } else {
-      ui.notifications.error("Failed to upload the modified image.");
-    }
-  }, "image/png");
-}
-
 // Function to generate a random filename
 function generateRandomFilename() {
   return Math.random().toString(36).substring(2, 12);
 }
-
-
 // Utility function to wait until miniPaint is fully loaded
 function waitForMiniPaintToLoad(callback) {
   const interval = setInterval(() => {
@@ -245,7 +128,6 @@ function waitForMiniPaintToLoad(callback) {
     }
   }, 100); // Check every 100ms
 }
-
 // Function to open miniPaint and automatically load the selected tile or token
 async function openMiniPaintWithAutoLoad() {
   const selectedTiles = canvas.tiles.controlled;
@@ -283,7 +165,6 @@ async function openMiniPaint() {
   const dialog = new Dialog(dialogData, dialogOptions);
   dialog.render(true);
 }
-
 // Utility function to wait until miniPaint is fully loaded
 function waitForMiniPaintToLoad(callback) {
   const interval = setInterval(() => {
@@ -294,10 +175,96 @@ function waitForMiniPaintToLoad(callback) {
     }
   }, 100); // Check every 100ms
 }
+// Function to save the modified image back to the actor's prototype token or actor image
+// Helper function to strip the cache-busting query string from a path
+function stripCacheBusting(path) {
+  if (!path) {
+    return null;
+  }
+  return path.split('?')[0];
+}
 
+// Function to replace actor texture with cache busting
+async function replaceActorTexture(type) {
+  const minipaintDoc = window.parent.minipaintDoc;
 
-// Function to load the selected tile as a layer into miniPaint
-async function loadTile() {
+  if (!minipaintDoc) {
+    ui.notifications.error("No actor document found.");
+    return;
+  }
+
+  const iframe = document.getElementById('myFrame');
+  const minipaintCanvas = iframe.contentWindow.document.querySelector('#canvas_minipaint');
+
+  if (!minipaintCanvas) {
+    ui.notifications.error("Could not find the miniPaint canvas.");
+    return;
+  }
+
+  minipaintCanvas.toBlob(async (blob) => {
+    if (!blob) {
+      ui.notifications.error("Failed to create a Blob from the canvas.");
+      return;
+    }
+
+    let originalPath = type === 'prototypeToken'
+      ? minipaintDoc.prototypeToken.texture.src
+      : minipaintDoc.img;
+
+    // Strip the cache-busting query string, if present
+    if (originalPath) {
+      originalPath = stripCacheBusting(originalPath);
+    }
+
+    let directoryPath = originalPath ? originalPath.substring(0, originalPath.lastIndexOf("/")) : null;
+    let fileName = originalPath ? originalPath.substring(originalPath.lastIndexOf("/") + 1) : generateRandomFilename() + ".png";
+
+    // If the original file is "mystery-man.svg", we rename it and convert it to PNG
+    if (fileName === "mystery-man.svg") {
+      fileName = generateRandomFilename() + ".png";
+    }
+
+    // Check if the directory is writable or accessible
+    try {
+      if (directoryPath) {
+        await FilePicker.browse("data", directoryPath);
+      } else {
+        throw new Error("Original directory path is null.");
+      }
+    } catch (error) {
+      console.warn("Directory is not writable, switching to miniMapNewTiles.");
+      directoryPath = "miniMapNewTiles";
+
+      try {
+        await FilePicker.browse("data", directoryPath);
+      } catch (error) {
+        if (error.message.includes("does not exist")) {
+          await FilePicker.createDirectory("data", directoryPath);
+        } else {
+          ui.notifications.error("Error accessing or creating the fallback directory.");
+          return;
+        }
+      }
+    }
+
+    const file = new File([blob], fileName, { type: 'image/png' });
+    const response = await FilePicker.upload("data", directoryPath, file, {});
+
+    if (response.path) {
+      const cacheBustedPath = `${stripCacheBusting(response.path)}?${Date.now()}`;
+      if (type === 'prototypeToken') {
+        await minipaintDoc.update({ "prototypeToken.texture.src": cacheBustedPath });
+      } else {
+        await minipaintDoc.update({ "img": cacheBustedPath });
+      }
+      ui.notifications.info("Image updated successfully.");
+    } else {
+      ui.notifications.error("Failed to upload the modified image.");
+    }
+  }, "image/png");
+}
+
+async function replaceTile() {
   const selectedTiles = canvas.tiles.controlled;
 
   if (selectedTiles.length !== 1) {
@@ -306,19 +273,210 @@ async function loadTile() {
   }
 
   const tile = selectedTiles[0];
-  const tileSrc = tile.document.texture.src;  // Corrected property to get the tile image source
+  let originalPath = stripCacheBusting(tile.document.texture.src);
 
-  if (!tileSrc) {
-    ui.notifications.error("Tile image source not found.");
+  if (!originalPath) {
+    originalPath = null;
+  }
+
+  let directoryPath = originalPath ? originalPath.substring(0, originalPath.lastIndexOf("/")) : "miniMapNewTiles";
+  let fileName = originalPath ? originalPath.substring(originalPath.lastIndexOf("/") + 1) : generateRandomFilename() + ".png";
+
+  // Check if the directory is writable or accessible
+  try {
+    await FilePicker.browse("data", directoryPath);
+  } catch (error) {
+    console.warn("Directory is not writable, switching to miniMapNewTiles.");
+    directoryPath = "miniMapNewTiles";
+
+    try {
+      await FilePicker.browse("data", directoryPath);
+    } catch (error) {
+      if (error.message.includes("does not exist")) {
+        await FilePicker.createDirectory("data", directoryPath);
+      } else {
+        ui.notifications.error("Error accessing or creating the fallback directory.");
+        return;
+      }
+    }
+  }
+
+  const iframe = document.getElementById('myFrame');
+  const minipaintCanvas = iframe.contentWindow.document.querySelector('#canvas_minipaint');
+
+  if (!minipaintCanvas) {
+    ui.notifications.error("Could not find the miniPaint canvas.");
     return;
   }
 
+  minipaintCanvas.toBlob(async (blob) => {
+    if (!blob) {
+      ui.notifications.error("Failed to create a Blob from the canvas.");
+      return;
+    }
+
+    const file = new File([blob], fileName, { type: blob.type });
+    const response = await FilePicker.upload("data", directoryPath, file, {});
+
+    if (response.path) {
+      const cacheBustedPath = `${response.path}?${Date.now()}`;
+      await tile.document.update({ "texture.src": cacheBustedPath });
+      ui.notifications.info("Tile image replaced successfully.");
+    } else {
+      ui.notifications.error("Failed to upload the modified image.");
+    }
+  }, "image/png");
+}
+
+
+async function replaceToken() {
+  const selectedTokens = canvas.tokens.controlled;
+
+  if (selectedTokens.length !== 1) {
+    ui.notifications.warn("Please select exactly one token.");
+    return;
+  }
+
+  const token = selectedTokens[0];
+  let originalPath = token.document.texture.src;
+
+  // Strip the cache-busting query string, if present
+  if (originalPath) {
+    originalPath = stripCacheBusting(originalPath);
+  }
+
+  let directoryPath = originalPath ? originalPath.substring(0, originalPath.lastIndexOf("/")) : null;
+  let fileName = originalPath ? originalPath.substring(originalPath.lastIndexOf("/") + 1) : generateRandomFilename() + ".png";
+
+  // If the original file is "mystery-man.svg", we rename it and convert it to PNG
+  if (fileName === "mystery-man.svg") {
+    fileName = generateRandomFilename() + ".png";
+  }
+
+  // Check if the directory is writable or accessible
+  try {
+    if (directoryPath) {
+      await FilePicker.browse("data", directoryPath);
+    } else {
+      throw new Error("Original directory path is null.");
+    }
+  } catch (error) {
+    console.warn("Directory is not writable, switching to miniMapNewTiles.");
+    directoryPath = "miniMapNewTiles";
+
+    try {
+      await FilePicker.browse("data", directoryPath);
+    } catch (error) {
+      if (error.message.includes("does not exist")) {
+        await FilePicker.createDirectory("data", directoryPath);
+      } else {
+        ui.notifications.error("Error accessing or creating the fallback directory.");
+        return;
+      }
+    }
+  }
+
+  const iframe = document.getElementById('myFrame');
+  const minipaintCanvas = iframe.contentWindow.document.querySelector('#canvas_minipaint');
+
+  if (!minipaintCanvas) {
+    ui.notifications.error("Could not find the miniPaint canvas.");
+    return;
+  }
+
+  minipaintCanvas.toBlob(async (blob) => {
+    if (!blob) {
+      ui.notifications.error("Failed to create a Blob from the canvas.");
+      return;
+    }
+
+    const file = new File([blob], fileName, { type: 'image/png' });
+    const response = await FilePicker.upload("data", directoryPath, file, {});
+
+    if (response.path) {
+      const cacheBustedPath = `${stripCacheBusting(response.path)}?${Date.now()}`;
+      await token.document.update({ "texture.src": cacheBustedPath });
+      ui.notifications.info("Token image replaced successfully.");
+    } else {
+      ui.notifications.error("Failed to upload the modified image.");
+    }
+  }, "image/png");
+}
+
+async function replaceItemTexture() {
+  const iframe = document.getElementById('myFrame');
+  const item = window.minipaintItem;
+
+  if (!item) {
+    ui.notifications.error("No item is currently being edited.");
+    return;
+  }
+
+  const originalImagePath = stripCacheBusting(item.img);
+  let directoryPath = originalImagePath ? originalImagePath.substring(0, originalImagePath.lastIndexOf('/')) : null;
+
+  let fileName = originalImagePath ? originalImagePath.substring(originalImagePath.lastIndexOf("/") + 1) : generateRandomFilename() + ".png";
+
+  // Check if the directory is writable or accessible
+  try {
+    if (directoryPath) {
+      await FilePicker.browse("data", directoryPath);
+    } else {
+      throw new Error("Original directory path is null.");
+    }
+  } catch (error) {
+    console.warn("Directory is not writable, switching to miniMapNewTiles.");
+    directoryPath = "miniMapNewTiles";
+
+    try {
+      await FilePicker.browse("data", directoryPath);
+    } catch (error) {
+      if (error.message.includes("does not exist")) {
+        await FilePicker.createDirectory("data", directoryPath);
+      } else {
+        ui.notifications.error("Error accessing or creating the fallback directory.");
+        return;
+      }
+    }
+  }
+
+  const canvas = iframe.contentWindow.document.querySelector('#canvas_minipaint');
+
+  if (!canvas) {
+    ui.notifications.error("Canvas not found.");
+    return;
+  }
+
+  canvas.toBlob(async (blob) => {
+    if (!blob) {
+      ui.notifications.error("Failed to create a Blob from the canvas.");
+      return;
+    }
+
+    const file = new File([blob], fileName, { type: blob.type });
+    const response = await FilePicker.upload("data", directoryPath, file, {});
+
+    if (response.path) {
+      const cacheBustedPath = `${response.path}?${Date.now()}`;
+      await item.update({ img: cacheBustedPath });
+      ui.notifications.info("Item image replaced successfully.");
+    } else {
+      ui.notifications.error("Failed to upload the modified image.");
+    }
+  }, "image/png");
+}
+
+
+function loadImageIntoMiniPaint(imageSrc) {
+  // Strip the cache-busting query string, if present
+  const cleanSrc = imageSrc.split('?')[0];
+  
   const image = new Image();
-  image.src = tileSrc;
+  image.src = cleanSrc;
 
   image.onload = () => {
     const Layers = document.getElementById('myFrame').contentWindow.Layers;
-    const name = image.src.replace(/^.*[\\\/]/, '');
+    const name = cleanSrc.replace(/^.*[\\\/]/, ''); // Use cleanSrc to name the layer
     const new_layer = {
       name: name,
       type: 'image',
@@ -332,12 +490,56 @@ async function loadTile() {
   };
 
   image.onerror = () => {
-    ui.notifications.error("Failed to load the tile image.");
+    ui.notifications.error("Failed to load the image.");
   };
+}
+// Function to load the selected tile as a layer into miniPaint
+async function loadTile() {
+  const selectedTiles = canvas.tiles.controlled;
+
+  if (selectedTiles.length !== 1) {
+    ui.notifications.warn("Please select exactly one tile.");
+    return;
+  }
+
+  const tile = selectedTiles[0];
+  const tileSrc = tile.document.texture.src;
+
+  if (!tileSrc) {
+    ui.notifications.error("Tile image source not found.");
+    return;
+  }
+
+  loadImageIntoMiniPaint(tileSrc);
+}
+// Function to load the selected token as a layer into miniPaint
+async function loadToken() {
+  const selectedTokens = canvas.tokens.controlled;
+
+  if (selectedTokens.length !== 1) {
+    ui.notifications.warn("Please select exactly one token.");
+    return;
+  }
+
+  const token = selectedTokens[0];
+  const tokenSrc = token.document.texture.src;
+
+  if (!tokenSrc) {
+    ui.notifications.error("Token image source not found.");
+    return;
+  }
+
+  loadImageIntoMiniPaint(tokenSrc);
+}
+async function loadActorTexture(textureSrc) {
+  loadImageIntoMiniPaint(textureSrc);
+}
+// Function to load the item texture as a layer into miniPaint
+async function loadItemTexture(textureSrc) {
+  loadImageIntoMiniPaint(textureSrc);
 }
 // Function to browse Foundry file picker and load the selected image as a layer
 async function browseFoundry() {
-  // Open the Foundry file picker
   const picker = new FilePicker({
     type: "image",
     callback: (path) => {
@@ -346,28 +548,7 @@ async function browseFoundry() {
         return;
       }
 
-      const image = new Image();
-      image.src = path;
-
-      image.onload = () => {
-        const Layers = document.getElementById('myFrame').contentWindow.Layers;
-        const name = image.src.replace(/^.*[\\\/]/, '');
-        const new_layer = {
-          name: name,
-          type: 'image',
-          data: image,
-          width: image.naturalWidth || image.width,
-          height: image.naturalHeight || image.height,
-          width_original: image.naturalWidth || image.width,
-          height_original: image.naturalHeight || image.height,
-        };
-        Layers.insert(new_layer);
-       // ui.notifications.info("Image loaded as a layer successfully.");
-      };
-
-      image.onerror = () => {
-        ui.notifications.error("Failed to load the selected image.");
-      };
+      loadImageIntoMiniPaint(path);
     },
     top: 100,
     left: 100,
@@ -387,225 +568,6 @@ function generateRandomFilename() {
   }
   return result;
 }
-
-async function replaceTile() {
-  const selectedTiles = canvas.tiles.controlled;
-
-  if (selectedTiles.length !== 1) {
-    ui.notifications.warn("Please select exactly one tile.");
-    return;
-  }
-
-  const tile = selectedTiles[0];
-  let originalPath = tile.document.texture.src;
-  let directoryPath;
-
-  // Determine the directory path
-  if (originalPath) {
-    directoryPath = originalPath.substring(0, originalPath.lastIndexOf("/"));
-
-    // Check if the directory is writable (user data) or not (core data)
-    try {
-      await FilePicker.browse("data", directoryPath);
-    } catch (error) {
-      console.warn("Directory is not writable, switching to miniMapNewTiles.");
-      directoryPath = "miniMapNewTiles";
-
-      // Check if the fallback directory exists, and create it if it doesn't
-      try {
-        await FilePicker.browse("data", directoryPath);
-      } catch (error) {
-        if (error.message.includes("does not exist")) {
-          await FilePicker.createDirectory("data", directoryPath);
-        } else {
-          ui.notifications.error("Error accessing or creating the fallback directory.");
-          return;
-        }
-      }
-    }
-  } else {
-    // If originalPath is null, set the directory to 'miniMapNewTiles' in the root
-    directoryPath = "miniMapNewTiles";
-
-    // Check if the directory exists, and create it if it doesn't
-    try {
-      await FilePicker.browse("data", directoryPath);
-    } catch (error) {
-      if (error.message.includes("does not exist")) {
-        await FilePicker.createDirectory("data", directoryPath);
-      } else {
-        ui.notifications.error("Error accessing or creating the directory.");
-        return;
-      }
-    }
-  }
-
-  const iframe = document.getElementById('myFrame');
-  const minipaintCanvas = iframe.contentWindow.document.querySelector('#canvas_minipaint');
-
-  if (!minipaintCanvas) {
-    ui.notifications.error("Could not find the miniPaint canvas.");
-    return;
-  }
-
-  // Convert the miniPaint canvas content to a Blob
-  minipaintCanvas.toBlob(async (blob) => {
-    if (!blob) {
-      ui.notifications.error("Failed to create a Blob from the canvas.");
-      return;
-    }
-
-    // Generate a random filename
-    const randomFilename = generateRandomFilename() + ".png";
-
-    // Create a File object from the Blob with the random filename
-    const file = new File([blob], randomFilename, { type: blob.type });
-
-    // Upload the image file to the determined directory
-    const response = await FilePicker.upload("data", directoryPath, file, {});
-
-    if (response.path) {
-      // Update the tile with the new image source
-      await tile.document.update({ "texture.src": response.path });
-
-      ui.notifications.info("Tile image replaced successfully.");
-    } else {
-      ui.notifications.error("Failed to upload the modified image.");
-    }
-  }, "image/png");
-}
-
-async function loadToken() {
-  const selectedTokens = canvas.tokens.controlled;
-
-  if (selectedTokens.length !== 1) {
-    ui.notifications.warn("Please select exactly one token.");
-    return;
-  }
-
-  const token = selectedTokens[0];
-  const tokenSrc = token.document.texture.src;
-
-  if (!tokenSrc) {
-    ui.notifications.error("Token image source not found.");
-    return;
-  }
-
-  const image = new Image();
-  image.src = tokenSrc;
-
-  image.onload = () => {
-    const Layers = document.getElementById('myFrame').contentWindow.Layers;
-    const name = image.src.replace(/^.*[\\\/]/, '');
-    const new_layer = {
-      name: name,
-      type: 'image',
-      data: image,
-      width: image.naturalWidth || image.width,
-      height: image.naturalHeight || image.height,
-      width_original: image.naturalWidth || image.width,
-      height_original: image.naturalHeight || image.height,
-    };
-    Layers.insert(new_layer);
-  };
-
-  image.onerror = () => {
-    ui.notifications.error("Failed to load the token image.");
-  };
-}
-async function replaceToken() {
-  const selectedTokens = canvas.tokens.controlled;
-
-  if (selectedTokens.length !== 1) {
-    ui.notifications.warn("Please select exactly one token.");
-    return;
-  }
-
-  const token = selectedTokens[0];
-  let originalPath = token.document.texture.src;
-  let directoryPath;
-
-  // Determine the directory path
-  if (originalPath) {
-    directoryPath = originalPath.substring(0, originalPath.lastIndexOf("/"));
-
-    // Check if the directory is writable (user data) or not (core data)
-    try {
-      await FilePicker.browse("data", directoryPath);
-    } catch (error) {
-      console.warn("Directory is not writable, switching to miniMapNewTiles.");
-      directoryPath = "miniMapNewTiles";
-
-      // Check if the fallback directory exists, and create it if it doesn't
-      try {
-        await FilePicker.browse("data", directoryPath);
-      } catch (error) {
-        if (error.message.includes("does not exist")) {
-          await FilePicker.createDirectory("data", directoryPath);
-        } else {
-          ui.notifications.error("Error accessing or creating the fallback directory.");
-          return;
-        }
-      }
-    }
-  } else {
-    // If originalPath is null, set the directory to 'miniMapNewTiles' in the root
-    directoryPath = "miniMapNewTiles";
-
-    // Check if the directory exists, and create it if it doesn't
-    try {
-      await FilePicker.browse("data", directoryPath);
-    } catch (error) {
-      if (error.message.includes("does not exist")) {
-        await FilePicker.createDirectory("data", directoryPath);
-      } else {
-        ui.notifications.error("Error accessing or creating the directory.");
-        return;
-      }
-    }
-  }
-
-  const iframe = document.getElementById('myFrame');
-  const minipaintCanvas = iframe.contentWindow.document.querySelector('#canvas_minipaint');
-
-  if (!minipaintCanvas) {
-    ui.notifications.error("Could not find the miniPaint canvas.");
-    return;
-  }
-
-  // Convert the miniPaint canvas content to a Blob
-  minipaintCanvas.toBlob(async (blob) => {
-    if (!blob) {
-      ui.notifications.error("Failed to create a Blob from the canvas.");
-      return;
-    }
-
-    // Generate a random filename
-    const randomFilename = generateRandomFilename() + ".png";
-
-    // Create a File object from the Blob with the random filename
-    const file = new File([blob], randomFilename, { type: blob.type });
-
-    // Upload the image file to the determined directory
-    const response = await FilePicker.upload("data", directoryPath, file, {});
-
-    if (response.path) {
-      // Update the token with the new image source
-      await token.document.update({ "texture.src": response.path });
-
-      ui.notifications.info("Token image replaced successfully.");
-    } else {
-      ui.notifications.error("Failed to upload the modified image.");
-    }
-  }, "image/png");
-}
-
-// Function to generate a random filename
-function generateRandomFilename() {
-  return Math.random().toString(36).substring(2, 12);
-}
-
-
 
 async function showCanvasInImagePopout() {
   const iframe = document.getElementById('myFrame');
@@ -640,7 +602,6 @@ async function showCanvasInImagePopout() {
     ui.notifications.error("Failed to upload the image.");
   }
 }
-
 // Utility function to convert a data URL to a File object
 const urlToFile = async (url, filename) => {
   const response = await fetch(url);
@@ -737,8 +698,6 @@ async function removeBackgroundAndAddLayer() {
 
   }, "image/png");
 }
-
-
 async function applySketchEffect() {
   const apiKey = game.settings.get('minipaint', 'stabilityAiApiKey');
   if (!apiKey) {
@@ -912,7 +871,6 @@ async function removeBackgroundUsingStabilityAI() {
     }
   }, "image/png");
 }
-
 async function searchAndReplace() {
   const iframe = document.getElementById('myFrame');
   const minipaintCanvas = iframe.contentWindow.document.querySelector('#canvas_minipaint');
@@ -1045,18 +1003,15 @@ function open_tokenframe() {
 function openFrame1() {
   openFrame('modules/minipaint/images/ringsimple1.json');
 }
-
 function openFrame2() {
   openFrame('modules/minipaint/images/ringsimple2.json');
 }
-
 function openFrame3() {
   openFrame('modules/minipaint/images/ringsimple3.json');
 }
 function openFrame4() {
   openFrame('modules/minipaint/images/tokenhead.json');
 }
-
 // Generic function to open any frame JSON file
 function openFrame(jsonPath) {
   // Access the miniPaint iframe and its FileOpen function
@@ -1104,7 +1059,6 @@ function registerMiniPaintContextMenu() {
     });
   });
 }
-
 // Function to launch miniPaint for editing an item's image
 async function launchMiniPaintForItem(item, imgPath) {
   // Check if the image path is valid
@@ -1122,82 +1076,8 @@ async function launchMiniPaintForItem(item, imgPath) {
     loadItemTexture(imgPath);
   });
 }
-
-// Function to load the item's image into miniPaint as a new layer
-async function loadItemTexture(textureSrc) {
-  const image = new Image();
-  image.src = textureSrc;
-
-  image.onload = () => {
-    const Layers = document.getElementById('myFrame').contentWindow.Layers;
-    const name = image.src.replace(/^.*[\\\/]/, '');
-    const new_layer = {
-      name: name,
-      type: 'image',
-      data: image,
-      width: image.naturalWidth || image.width,
-      height: image.naturalHeight || image.height,
-      width_original: image.naturalWidth || image.width,
-      height_original: image.naturalHeight || image.height,
-    };
-    Layers.insert(new_layer);
-    console.log("Image added to miniPaint as a new layer.");
-  };
-
-  image.onerror = () => {
-    ui.notifications.error("Failed to load the image.");
-  };
-}
-
 // Register the context menu option
 registerMiniPaintContextMenu();
-
-async function replaceItemTexture() {
-  const iframe = document.getElementById('myFrame');
-  const item = window.minipaintItem;
-
-  if (!item) {
-    ui.notifications.error("No item is currently being edited.");
-    return;
-  }
-
-  // Get the original image path
-  const originalImagePath = item.img;
-  const directoryPath = originalImagePath.substring(0, originalImagePath.lastIndexOf('/'));
-
-  // Convert the miniPaint canvas content to a Blob
-  const iframeDoc = iframe.contentWindow.document;
-  const canvas = iframeDoc.querySelector('#canvas_minipaint');
-
-  if (!canvas) {
-    ui.notifications.error("Canvas not found.");
-    return;
-  }
-
-  canvas.toBlob(async (blob) => {
-    if (!blob) {
-      ui.notifications.error("Failed to create a Blob from the canvas.");
-      return;
-    }
-
-    // Generate a random filename
-    const randomFilename = generateRandomFilename() + ".png";
-
-    // Create a File object from the Blob with the random filename
-    const file = new File([blob], randomFilename, { type: blob.type });
-
-    // Upload the image file to the same directory as the original item image
-    const response = await FilePicker.upload("data", directoryPath, file, {});
-
-    if (response.path) {
-      // Update the item with the new image source
-      await item.update({ img: response.path });
-      ui.notifications.info("Item image replaced successfully.");
-    } else {
-      ui.notifications.error("Failed to upload the modified image.");
-    }
-  }, "image/png");
-}
 
 async function applyInpaintToken() {
   const apiKey = game.settings.get('minipaint', 'stabilityAiApiKey');
