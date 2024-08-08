@@ -86,12 +86,12 @@ async function launchMiniPaintForActor(minipaintDoc, type) {
     ui.notifications.error("Image source not found.");
     return;
   }
-
+  window.tidyType = type;
   await openMiniPaint(); // Open miniPaint
 
   waitForMiniPaintToLoad(() => {
     loadActorTexture(textureSrc);
-    highlightRelevantButton(type); // Highlight the relevant button
+  //  highlightRelevantButton(type); // Highlight the relevant button
   });
 }
 // Function to highlight the relevant button
