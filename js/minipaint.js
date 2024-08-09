@@ -453,23 +453,72 @@ async function replaceItemTexture() {
     return;
   }
 
-  canvas.toBlob(async (blob) => {
-    if (!blob) {
-      ui.notifications.error("Failed to create a Blob from the canvas.");
-      return;
-    }
+  // If fromInv is true, prompt for a new file name
+  if (window.fromInv) {
+    new Dialog({
+      title: "Enter New Image Name",
+      content: `<form>
+                  <div class="form-group">
+                    <label>New Image Name:</label>
+                    <input type="text" id="new-image-name" value="${item.name}" />
+                  </div>
+                </form>`,
+      buttons: {
+        ok: {
+          label: "OK",
+          callback: async html => {
+            const input = html.find('#new-image-name').val();
+            if (!input) {
+              ui.notifications.error("You must enter a valid name.");
+              return;
+            }
 
-    const file = new File([blob], fileName, { type: 'image/png' });
-    const response = await FilePicker.upload("data", directoryPath, file, {});
+            fileName = `${input}.png`; // Assuming PNG, change if needed
 
-    if (response.path) {
-      const cacheBustedPath = `${stripCacheBusting(response.path)}?${Date.now()}`;
-      await item.update({ img: cacheBustedPath });
-      ui.notifications.info("Item image replaced successfully.");
-    } else {
-      ui.notifications.error("Failed to upload the modified image.");
-    }
-  }, "image/png");
+            canvas.toBlob(async (blob) => {
+              if (!blob) {
+                ui.notifications.error("Failed to create a Blob from the canvas.");
+                return;
+              }
+
+              const file = new File([blob], fileName, { type: 'image/png' });
+              const response = await FilePicker.upload("data", directoryPath, file, {});
+
+              if (response.path) {
+                const cacheBustedPath = `${response.path}?${Date.now()}`;
+                await item.update({ img: cacheBustedPath });
+                ui.notifications.info("Item image replaced successfully.");
+              } else {
+                ui.notifications.error("Failed to upload the modified image.");
+              }
+            }, "image/png");
+          }
+        },
+        cancel: {
+          label: "Cancel"
+        }
+      }
+    }).render(true);
+  } else {
+    // Regular behavior
+    canvas.toBlob(async (blob) => {
+      if (!blob) {
+        ui.notifications.error("Failed to create a Blob from the canvas.");
+        return;
+      }
+
+      const file = new File([blob], fileName, { type: 'image/png' });
+      const response = await FilePicker.upload("data", directoryPath, file, {});
+
+      if (response.path) {
+        const cacheBustedPath = `${stripCacheBusting(response.path)}?${Date.now()}`;
+        await item.update({ img: cacheBustedPath });
+        ui.notifications.info("Item image replaced successfully.");
+      } else {
+        ui.notifications.error("Failed to upload the modified image.");
+      }
+    }, "image/png");
+  }
 }
 
 
@@ -1036,7 +1085,34 @@ function openFrame(jsonPath) {
       console.error("Error loading JSON file:", ex);
   });
 }
+
+// Function to add miniPaint option to the dnd5e item context menu in actor inventories
+Hooks.on("dnd5e.getItemContextOptions", (item, options) => {
+  createMiniPaintContextForInventory(item, options);
+});
+
+function createMiniPaintContextForInventory(item, options) {
+  options.push({
+    name: "miniPaint Edit",
+    icon: '<i class="fas fa-paint-brush"></i>',
+    callback: async () => {
+      const imgPath = item.img;
+
+      if (!imgPath) {
+        ui.notifications.error("Item does not have an associated image.");
+        return;
+      }
+
+      // Open miniPaint and load the image as a new layer
+      await launchMiniPaintForItem(item, imgPath, true); // fromInv = true
+    },
+  });
+}
+
+
+
 // Function to register the context menu for items
+// Function to register the context menu for items in the item directory
 function registerMiniPaintContextMenu() {
   Hooks.on('getItemDirectoryEntryContext', (html, options) => {
     options.push({
@@ -1060,16 +1136,21 @@ function registerMiniPaintContextMenu() {
         }
 
         // Open miniPaint and load the image as a new layer
-        await launchMiniPaintForItem(item, imgPath);
+        await launchMiniPaintForItem(item, imgPath, false); // fromInv = false
       }
     });
   });
 }
+
 // Function to launch miniPaint for editing an item's image
-async function launchMiniPaintForItem(item, imgPath) {
-  // Check if the image path is valid
+
+// Function to launch miniPaint for editing an item's image
+async function launchMiniPaintForItem(item, imgPath, fromInv = false) {
+  // Set global variables to track the current item and its source
   window.tidyType = null;
   window.minipaintItem = item;
+  window.fromInv = fromInv; // Set the fromInv flag
+
   if (!imgPath) {
     ui.notifications.error("Image source not found.");
     return;
@@ -1083,6 +1164,8 @@ async function launchMiniPaintForItem(item, imgPath) {
     loadItemTexture(imgPath);
   });
 }
+
+
 // Register the context menu option
 registerMiniPaintContextMenu();
 
