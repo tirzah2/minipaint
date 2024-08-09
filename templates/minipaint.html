@@ -79,8 +79,9 @@ if (fileMenu) {
   fileMenu.addEventListener('click', () => {
     const saveAsMenuItem = iframeDocument.querySelector('#main_menu_1_6');
     const newMenuItem = iframeDocument.querySelector('#main_menu_1_0');
-console.log(window.tidyType);
 
+const mainMenuLeft = parseFloat(window.getComputedStyle(fileMenu).left); // Get the left style as a number
+const adjustedLeft = mainMenuLeft - 151.854;
     if (saveAsMenuItem && newMenuItem) {
       // Create New Token menu item
       const newTokenMenuItem = iframeDocument.createElement('a');
@@ -164,7 +165,7 @@ console.log(window.tidyType);
       subMenu.style.display = 'none'; // Hidden by default
       subMenu.style.position = 'absolute';
       subMenu.style.zIndex = '1000';
-      subMenu.style.left = '163px'; // Adjusted left position
+      subMenu.style.left = `221px`; // Adjusted left position
       subMenu.style.top = '30px'; // Adjusted top position
 
       // Create Frame 1, Frame 2, and Frame 3 menu items
@@ -230,14 +231,22 @@ console.log(window.tidyType);
 
       // Insert the new menu items above the "Save As" item
       saveAsMenuItem.parentNode.insertBefore(savePortraitMenuItem, saveAsMenuItem);
+      if (!window.parent.minipaintItem) {
+  saveItemMenuItem.style.display = 'none';
+} else {
+  saveItemMenuItem.style.display = 'block'; 
+  saveItemMenuItem.style.backgroundColor = 'darkgreen';
+  saveItemMenuItem.style.border = '3px solid lightgreen';
+  saveItemMenuItem.style.color = 'lightgreen';
+}
       if (window.parent.tidyType === 'img') {
     savePortraitMenuItem.style.backgroundColor = 'darkgreen';
-    savePortraitMenuItem.style.border = '2px solid white';
+    savePortraitMenuItem.style.border = '3px solid lightgreen';
     savePortraitMenuItem.style.color = 'lightgreen';
     //saveTokenMenuItem.style.display = 'none'; // Hide Save Token button
 } else if (window.parent.tidyType === 'prototypeToken') {
     saveTokenMenuItem.style.backgroundColor = 'darkgreen';
-    saveTokenMenuItem.style.border = '2px solid white';
+    saveTokenMenuItem.style.border = '3px solid lightgreen';
     saveTokenMenuItem.style.color = 'lightgreen';
     //savePortraitMenuItem.style.display = 'none'; // Hide Save Portrait button
 } else {
