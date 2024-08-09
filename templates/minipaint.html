@@ -98,6 +98,35 @@ const adjustedLeft = mainMenuLeft - 151.854;
       `;
       newTokenMenuItem.onclick = () => window.parent.open_tokenframe();
 
+
+      const saveAsRingMenuItem = iframeDocument.createElement('a');
+          saveAsRingMenuItem.id = "main_menu_save_as_ring";
+          saveAsRingMenuItem.role = "menuitem";
+          saveAsRingMenuItem.tabindex = "-1";
+          saveAsRingMenuItem.ariaHaspopup = "false";
+          saveAsRingMenuItem.href = "javascript:void(0)";
+          saveAsRingMenuItem.target = "_self";
+          saveAsRingMenuItem.dataset.level = "72";
+          saveAsRingMenuItem.dataset.index = "7";
+          saveAsRingMenuItem.innerHTML = `
+            <span class="name">Save as Frame</span>
+          `;
+          saveAsRingMenuItem.onclick = () => saveCanvasToFrames();
+
+
+      const ringsBrowserMenuItem = iframeDocument.createElement('a');
+          ringsBrowserMenuItem.id = "main_menu_rings_browser";
+          ringsBrowserMenuItem.role = "menuitem";
+          ringsBrowserMenuItem.tabindex = "-1";
+          ringsBrowserMenuItem.ariaHaspopup = "false";
+          ringsBrowserMenuItem.href = "javascript:void(0)";
+          ringsBrowserMenuItem.target = "_self";
+          ringsBrowserMenuItem.dataset.level = "71";
+          ringsBrowserMenuItem.dataset.index = "10";
+          ringsBrowserMenuItem.innerHTML = `
+            <span class="name">Frame Browser</span>
+          `;
+          ringsBrowserMenuItem.onclick = () => galleryMP.render(true);
       // Create Save Token menu item
       const saveTokenMenuItem = iframeDocument.createElement('a');
       saveTokenMenuItem.id = "main_menu_save_proto";
@@ -225,10 +254,11 @@ const adjustedLeft = mainMenuLeft - 151.854;
       if (mainMenu) {
         mainMenu.appendChild(subMenu);
       }
-
+      const templateMenuItem = iframeDocument.querySelector('#main_menu_new_frame');
+      templateMenuItem.parentNode.insertBefore(saveAsRingMenuItem, templateMenuItem.nextSibling);
       // Insert the New Simple Token menu item above the "New" item
       newMenuItem.parentNode.insertBefore(newTokenMenuItem, newFrameMenuItem);
-
+      newMenuItem.parentNode.insertBefore(ringsBrowserMenuItem, newTokenMenuItem.nextSibling);
       // Insert the new menu items above the "Save As" item
       saveAsMenuItem.parentNode.insertBefore(savePortraitMenuItem, saveAsMenuItem);
       if (!window.parent.minipaintItem) {

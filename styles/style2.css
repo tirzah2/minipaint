@@ -3,7 +3,7 @@
     min-width: 750px;
 height: unset !important;
 width: unset !important;
-    min-height: 500px !important;
+    min-height: 580px !important;
     max-height: fit-content;
     resize: both;
     max-width: fit-content;
@@ -22,7 +22,7 @@ width: unset !important;
 }
 
 #myFrame {
-    min-height: 500px !important;
+    min-height: 580px !important;
     border: 0px;
     resize: both;
     min-width: 750px;

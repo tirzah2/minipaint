@@ -1,0 +1,51 @@
+{
+	"info": {
+		"width": 600,
+		"height": 600,
+		"about": "Image data with multi-layers. Can be opened using miniPaint - https://github.com/viliusle/miniPaint",
+		"date": "2024-08-09",
+		"version": "4.14.2",
+		"layer_active": 5,
+		"guides": []
+	},
+	"user_fonts": {},
+	"layers": [
+		{
+			"id": 5,
+			"parent_id": 0,
+			"name": "Ellipse #5",
+			"type": "ellipse",
+			"link": null,
+			"x": 66,
+			"y": 60,
+			"width": 480,
+			"width_original": null,
+			"height": 480,
+			"height_original": null,
+			"visible": true,
+			"is_vector": true,
+			"hide_selection_if_active": false,
+			"opacity": 100,
+			"order": 2,
+			"composition": "source-over",
+			"rotate": 0,
+			"data": null,
+			"params": {
+				"border_size": 4,
+				"border": true,
+				"fill": true,
+				"border_color": "#ff0000",
+				"fill_color": "#ff0000",
+				"circle": false
+			},
+			"status": null,
+			"color": null,
+			"filters": [],
+			"render_function": [
+				"ellipse",
+				"render"
+			]
+		}
+	],
+	"data": []
+}

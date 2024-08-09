@@ -1,4 +1,5 @@
 
+
 Hooks.once('init', () => {
   game.settings.register('minipaint', 'stabilityAiApiKey', {
     name: "Stability AI API Key",
@@ -127,7 +128,71 @@ async function openMiniPaintWithAutoLoad() {
     ui.notifications.warn("More than one item selected, opening empty miniPaint.");
   }
 }
-
+// Function to load the selected tile as a layer into miniPaint
+async function loadTile() {
+  const selectedTiles = canvas.tiles.controlled;
+  if (selectedTiles.length !== 1) {
+    ui.notifications.warn("Please select exactly one tile.");
+    return;
+  }
+  const tile = selectedTiles[0];
+  const tileSrc = tile.document.texture.src;  // Corrected property to get the tile image source
+  if (!tileSrc) {
+    ui.notifications.error("Tile image source not found.");
+    return;
+  }
+  const image = new Image();
+  image.src = tileSrc;
+  image.onload = () => {
+    const Layers = document.getElementById('myFrame').contentWindow.Layers;
+    const name = image.src.replace(/^.*[\\\/]/, '');
+    const new_layer = {
+      name: name,
+      type: 'image',
+      data: image,
+      width: image.naturalWidth || image.width,
+      height: image.naturalHeight || image.height,
+      width_original: image.naturalWidth || image.width,
+      height_original: image.naturalHeight || image.height,
+    };
+    Layers.insert(new_layer);
+  };
+  image.onerror = () => {
+    ui.notifications.error("Failed to load the tile image.");
+  };
+}
+async function loadToken() {
+  const selectedTokens = canvas.tokens.controlled;
+  if (selectedTokens.length !== 1) {
+    ui.notifications.warn("Please select exactly one token.");
+    return;
+  }
+  const token = selectedTokens[0];
+  const tokenSrc = token.document.texture.src;
+  if (!tokenSrc) {
+    ui.notifications.error("Token image source not found.");
+    return;
+  }
+  const image = new Image();
+  image.src = tokenSrc;
+  image.onload = () => {
+    const Layers = document.getElementById('myFrame').contentWindow.Layers;
+    const name = image.src.replace(/^.*[\\\/]/, '');
+    const new_layer = {
+      name: name,
+      type: 'image',
+      data: image,
+      width: image.naturalWidth || image.width,
+      height: image.naturalHeight || image.height,
+      width_original: image.naturalWidth || image.width,
+      height_original: image.naturalHeight || image.height,
+    };
+    Layers.insert(new_layer);
+  };
+  image.onerror = () => {
+    ui.notifications.error("Failed to load the token image.");
+  };
+}
 // Function to open the miniPaint application window
 async function openMiniPaint() {
   const content = await renderTemplate("modules/minipaint/templates/minipaint.html");
@@ -149,6 +214,7 @@ async function openMiniPaint() {
   const dialog = new Dialog(dialogData, dialogOptions);
   dialog.render(true);
 }
+
 // Utility function to wait until miniPaint is fully loaded
 function waitForMiniPaintToLoad(callback) {
   const interval = setInterval(() => {

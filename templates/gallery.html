@@ -1,0 +1,12 @@
+<div class="gallery-containerMP">
+    {{#each images}}
+      <img class="thumbnail" src="{{this.src}}" alt="{{this.alt}}" data-src="{{this.src}}" />
+    {{/each}}
+  </div>
+  
+  <div class="pagination-controls">
+    <button class="pagination-previous" {{#if (eq currentPage 1)}}disabled{{/if}}>Previous</button>
+    <span>Page {{currentPage}} of {{totalPages}}</span>
+    <button class="pagination-next" {{#if (eq currentPage totalPages)}}disabled{{/if}}>Next</button>
+  </div>
+  
