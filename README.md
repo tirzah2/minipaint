@@ -1,3 +1,6 @@
+Support Me on Ko-Fi! :D
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/D1D210UKH9)
+
 ### Overview
 
 miniPaint is a powerful, browser-based image editor that now integrates seamlessly with FoundryVTT, allowing Game Masters to edit and manage images directly within the FoundryVTT environment. This integration brings the full power of miniPaint’s tools to your tabletop RPG experience.
