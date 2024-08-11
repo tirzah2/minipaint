@@ -113,7 +113,6 @@ const adjustedLeft = mainMenuLeft - 151.854;
           `;
           saveAsRingMenuItem.onclick = () => saveCanvasToFrames();
 
-
       const ringsBrowserMenuItem = iframeDocument.createElement('a');
           ringsBrowserMenuItem.id = "main_menu_rings_browser";
           ringsBrowserMenuItem.role = "menuitem";
@@ -182,7 +181,7 @@ const adjustedLeft = mainMenuLeft - 151.854;
       newFrameMenuItem.href = "javascript:void(0)";
       newFrameMenuItem.target = "_self";
       newFrameMenuItem.dataset.level = "71";
-      newFrameMenuItem.dataset.index = "6";
+      newFrameMenuItem.dataset.index = "";
       newFrameMenuItem.innerHTML = `
         <span class="name"><- Templates</span>
       `;
@@ -247,21 +246,26 @@ const adjustedLeft = mainMenuLeft - 151.854;
       });
 
       // Insert the New Frame menu item above the "New" item
-      newMenuItem.parentNode.insertBefore(newFrameMenuItem, newMenuItem);
+// Insert the New Frame menu item above the "New" item
+newMenuItem.parentNode.insertBefore(newFrameMenuItem, newMenuItem);
 
-      // Insert the submenu inside the "Main Menu" structure
-      const mainMenu = iframeDocument.querySelector('.main_menu');
-      if (mainMenu) {
-        mainMenu.appendChild(subMenu);
-      }
-      const templateMenuItem = iframeDocument.querySelector('#main_menu_new_frame');
-      templateMenuItem.parentNode.insertBefore(saveAsRingMenuItem, templateMenuItem.nextSibling);
-      // Insert the New Simple Token menu item above the "New" item
-      newMenuItem.parentNode.insertBefore(newTokenMenuItem, newFrameMenuItem);
-      newMenuItem.parentNode.insertBefore(ringsBrowserMenuItem, newTokenMenuItem.nextSibling);
-      // Insert the new menu items above the "Save As" item
-      saveAsMenuItem.parentNode.insertBefore(savePortraitMenuItem, saveAsMenuItem);
-      if (!window.parent.minipaintItem) {
+// Insert the submenu inside the "Main Menu" structure
+const mainMenu = iframeDocument.querySelector('.main_menu');
+if (mainMenu) {
+  mainMenu.appendChild(subMenu);
+}
+
+const templateMenuItem = iframeDocument.querySelector('#main_menu_new_frame');
+templateMenuItem.parentNode.insertBefore(saveAsRingMenuItem, templateMenuItem.nextSibling);
+
+// Insert the New Simple Token menu item above the "New" item
+newMenuItem.parentNode.insertBefore(newTokenMenuItem, newFrameMenuItem);
+newMenuItem.parentNode.insertBefore(ringsBrowserMenuItem, newTokenMenuItem.nextSibling);
+
+// Insert the new menu items above the "Save As" item
+saveAsMenuItem.parentNode.insertBefore(savePortraitMenuItem, saveAsMenuItem);
+
+if (!window.parent.minipaintItem) {
   saveItemMenuItem.style.display = 'none';
 } else {
   saveItemMenuItem.style.display = 'block'; 
@@ -269,23 +273,57 @@ const adjustedLeft = mainMenuLeft - 151.854;
   saveItemMenuItem.style.border = '3px solid lightgreen';
   saveItemMenuItem.style.color = 'lightgreen';
 }
-      if (window.parent.tidyType === 'img') {
-    savePortraitMenuItem.style.backgroundColor = 'darkgreen';
-    savePortraitMenuItem.style.border = '3px solid lightgreen';
-    savePortraitMenuItem.style.color = 'lightgreen';
-    //saveTokenMenuItem.style.display = 'none'; // Hide Save Token button
+
+if (window.parent.tidyType === 'img') {
+  savePortraitMenuItem.style.backgroundColor = 'darkgreen';
+  savePortraitMenuItem.style.border = '3px solid lightgreen';
+  savePortraitMenuItem.style.color = 'lightgreen';
+  //saveTokenMenuItem.style.display = 'none'; // Hide Save Token button
 } else if (window.parent.tidyType === 'prototypeToken') {
-    saveTokenMenuItem.style.backgroundColor = 'darkgreen';
-    saveTokenMenuItem.style.border = '3px solid lightgreen';
-    saveTokenMenuItem.style.color = 'lightgreen';
-    //savePortraitMenuItem.style.display = 'none'; // Hide Save Portrait button
+  saveTokenMenuItem.style.backgroundColor = 'darkgreen';
+  saveTokenMenuItem.style.border = '3px solid lightgreen';
+  saveTokenMenuItem.style.color = 'lightgreen';
+  //savePortraitMenuItem.style.display = 'none'; // Hide Save Portrait button
 } else {
-    // Hide both buttons if tidyType is null, undefined, or any other value
-    saveTokenMenuItem.style.display = 'none';
-    savePortraitMenuItem.style.display = 'none';
+  // Hide both buttons if tidyType is null, undefined, or any other value
+  saveTokenMenuItem.style.display = 'none';
+  savePortraitMenuItem.style.display = 'none';
 }
-      saveAsMenuItem.parentNode.insertBefore(saveTokenMenuItem, savePortraitMenuItem);
-      saveAsMenuItem.parentNode.insertBefore(saveItemMenuItem, saveTokenMenuItem);
+const OpenGifMenuItem = iframeDocument.createElement('a');
+OpenGifMenuItem.id = "main_menu_open_gif";
+OpenGifMenuItem.role = "menuitem";
+OpenGifMenuItem.tabindex = "-1";
+OpenGifMenuItem.ariaHaspopup = "false";
+OpenGifMenuItem.href = "javascript:void(0)";
+OpenGifMenuItem.target = "_self";
+OpenGifMenuItem.dataset.level = "79";
+OpenGifMenuItem.dataset.index = "10";
+OpenGifMenuItem.innerHTML = `
+  <span class="name">Open GIF</span>
+`;
+OpenGifMenuItem.onclick = () => openGif();
+// Insert "Save as GIF" menu item after "Save as Frame"
+const saveAsGifMenuItem = iframeDocument.createElement('a');
+saveAsGifMenuItem.id = "main_menu_save_as_gif";
+saveAsGifMenuItem.role = "menuitem";
+saveAsGifMenuItem.tabindex = "-1";
+saveAsGifMenuItem.ariaHaspopup = "false";
+saveAsGifMenuItem.href = "javascript:void(0)";
+saveAsGifMenuItem.target = "_self";
+saveAsGifMenuItem.dataset.level = "73";
+saveAsGifMenuItem.dataset.index = "8";
+saveAsGifMenuItem.innerHTML = `
+  <span class="name">Save as GIF</span>
+`;
+saveAsGifMenuItem.onclick = () => window.parent.saveAnimation();
+
+saveAsRingMenuItem.parentNode.insertBefore(saveAsGifMenuItem, saveAsRingMenuItem.nextSibling);
+saveAsRingMenuItem.parentNode.insertBefore(OpenGifMenuItem, saveAsGifMenuItem.nextSibling);
+
+// Insert other menu items
+saveAsMenuItem.parentNode.insertBefore(saveTokenMenuItem, savePortraitMenuItem);
+saveAsMenuItem.parentNode.insertBefore(saveItemMenuItem, saveTokenMenuItem);
+
     }
   });
 }
@@ -433,50 +471,51 @@ function replaceElementInIframe() {
 
       // Create the "BG" button using the reusable function
       const bgButton = createStyledButton(iframeDocument, 'BG', () => {
-  window.parent.removeBackgroundAndAddLayer();
-});
-bgButton.title = "Remove the background of the image using removeBG.";
+        window.parent.removeBackgroundAndAddLayer();
+      });
+      bgButton.title = "Remove the background of the image using removeBG.";
 
-const sketchButton = createStyledButton(iframeDocument, 'Sketch', () => {
-  window.parent.applySketchEffect();
-});
-sketchButton.title = "Transform your sketch into a real image using Stability AI.";
+      const sketchButton = createStyledButton(iframeDocument, 'Sketch', () => {
+        window.parent.applySketchEffect();
+      });
+      sketchButton.title = "Transform your sketch into a real image using Stability AI.";
 
-const bgRemoveButton = createStyledButton(iframeDocument, 'BG', () => {
-  window.parent.removeBackgroundUsingStabilityAI();
-});
-bgRemoveButton.title = "Remove the background using Stability AI's API.";
+      const bgRemoveButton = createStyledButton(iframeDocument, 'BG', () => {
+        window.parent.removeBackgroundUsingStabilityAI();
+      });
+      bgRemoveButton.title = "Remove the background using Stability AI's API.";
 
-const srButton = createStyledButton(iframeDocument, 'S&R', () => {
-  window.parent.searchAndReplace();
-});
-srButton.title = "Search and replace specific elements in the image using Stability AI.";
+      const srButton = createStyledButton(iframeDocument, 'S&R', () => {
+        window.parent.searchAndReplace();
+      });
+      srButton.title = "Search and replace specific elements in the image using Stability AI.";
 
-const genRing = createStyledButton(iframeDocument, 'GenRing', () => {
-  window.parent.applyInpaintRing();
-});
-genRing.title = "Generate a token ring replacing the transparent area.";
+      const genRing = createStyledButton(iframeDocument, 'GenRing', () => {
+        window.parent.applyInpaintRing();
+      });
+      genRing.title = "Generate a token ring replacing the transparent area.";
 
-const genToken = createStyledButton(iframeDocument, 'GenToken', () => {
-  window.parent.applyInpaintToken();
-});
-genToken.title = "Generate and apply a token inside of the transparent area.";
+      const genToken = createStyledButton(iframeDocument, 'GenToken', () => {
+        window.parent.applyInpaintToken();
+      });
+      genToken.title = "Generate and apply a token inside of the transparent area.";
 
-      // Insert the labels and buttons into the DOM in the correct order
-      animationElement.parentNode.replaceChild(bgLabel, animationElement);
+      // Append the labels and buttons after the "Animate" button
+      animationElement.parentNode.insertBefore(bgLabel, animationElement.nextSibling);
       bgLabel.parentNode.insertBefore(bgButton, bgLabel.nextSibling);
       bgButton.parentNode.insertBefore(sketchLabel, bgButton.nextSibling);
       sketchLabel.parentNode.insertBefore(sketchButton, sketchLabel.nextSibling);
       sketchButton.parentNode.insertBefore(bgRemoveButton, sketchButton.nextSibling);
-      sketchButton.parentNode.insertBefore(srButton, sketchButton.nextSibling);
-      srButton.parentNode.insertBefore(genRing, sketchButton.nextSibling);
-      genRing.parentNode.insertBefore(genToken, sketchButton.nextSibling);
+      bgRemoveButton.parentNode.insertBefore(srButton, bgRemoveButton.nextSibling);
+      srButton.parentNode.insertBefore(genRing, srButton.nextSibling);
+      genRing.parentNode.insertBefore(genToken, genRing.nextSibling);
     }
   }
 }
 
 // Attach an event listener to the iframe to run the function once it's loaded
 document.getElementById('myFrame').addEventListener('load', replaceElementInIframe);
+
 
 
 function attachDropEventListener() {

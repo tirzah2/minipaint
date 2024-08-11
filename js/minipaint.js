@@ -678,6 +678,113 @@ async function browseFoundry() {
 
   picker.render(true);
 }
+// Function to load the GIF as an ArrayBuffer
+function loadGifAsArrayBuffer(gifUrl) {
+  return fetch(gifUrl)
+      .then(response => response.arrayBuffer())
+      .then(buffer => new Uint8Array(buffer));
+}
+
+// Function to extract frames from the GIF, handling transparency and disposal
+function extractFramesFromGif(gifArrayBuffer) {
+  const gifReader = new GifReader(gifArrayBuffer);
+  const extractedFrames = [];
+  const tempCanvas = document.createElement('canvas');
+  const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
+
+  tempCanvas.width = gifReader.width;
+  tempCanvas.height = gifReader.height;
+
+  const previousImageData = tempCtx.createImageData(gifReader.width, gifReader.height);
+
+  for (let frameIndex = 0; frameIndex < gifReader.numFrames(); frameIndex++) {
+      const frameInfo = gifReader.frameInfo(frameIndex);
+
+      if (frameInfo.disposal === 2 || frameInfo.disposal === 3) {
+          // Clear canvas if disposal method is 2 (restore to background color)
+          // or 3 (restore to previous frame)
+          tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
+      } else if (frameInfo.disposal === 1) {
+          // Restore previous image data for disposal method 1 (do not dispose)
+          tempCtx.putImageData(previousImageData, 0, 0);
+      }
+
+      const frameImageData = tempCtx.getImageData(0, 0, gifReader.width, gifReader.height);
+      gifReader.decodeAndBlitFrameRGBA(frameIndex, frameImageData.data);
+      tempCtx.putImageData(frameImageData, 0, 0);
+
+      // Save the current image data for potential reuse
+      tempCtx.drawImage(tempCanvas, 0, 0);
+      previousImageData.data.set(frameImageData.data);
+
+      // Store the frame as a data URL
+      const frameDataUrl = tempCanvas.toDataURL();
+      extractedFrames.push(frameDataUrl);
+  }
+
+  return extractedFrames;
+}
+
+
+// Function to add each frame as a new layer in MiniPaint
+function addFramesAsLayersToMiniPaint(framesDataUrls) {
+  const Layers = document.getElementById('myFrame').contentWindow.Layers;
+
+  framesDataUrls.forEach((frameDataUrl, frameNumber) => {
+      const img = new Image();
+      img.src = frameDataUrl;
+
+      img.onload = () => {
+          const name = `GIF Frame ${frameNumber + 1}`;
+          const new_layer = {
+              name: name,
+              type: 'image',
+              data: img,
+              width: img.naturalWidth || img.width,
+              height: img.naturalHeight || img.height,
+              width_original: img.naturalWidth || img.width,
+              height_original: img.naturalHeight || img.height,
+          };
+          Layers.insert(new_layer);
+      };
+
+      img.onerror = () => {
+          ui.notifications.error(`Failed to load frame ${frameNumber + 1} of the GIF.`);
+      };
+  });
+}
+
+// Function to open the FilePicker and load a GIF
+async function browseAndOpenGifInMiniPaint() {
+const picker = new FilePicker({
+  type: "image",
+  callback: (path) => {
+    if (!path) {
+      ui.notifications.warn("No image selected.");
+      return;
+    }
+
+    // Load the selected GIF file into MiniPaint
+    loadGifAsArrayBuffer(path).then(gifArrayBuffer => {
+        const framesDataUrls = extractFramesFromGif(gifArrayBuffer);
+        addFramesAsLayersToMiniPaint(framesDataUrls);
+    });
+  },
+  top: 100,
+  left: 100,
+  button: "Browse"
+});
+
+picker.render(true);
+}
+
+// Function to be called when "Open GIF" menu item is clicked
+function openGif() {
+  browseAndOpenGifInMiniPaint();
+}
+
+// Usage example - remove hardcoded GIF URL and replace with dynamic file picker
+
 
 // Function to replace the selected tile's image with the modified image from miniPaint
 // Utility function to generate a random 10-character alphanumeric string
@@ -1121,6 +1228,42 @@ function open_tokenframe() {
       console.error("Error loading JSON file:", ex);
   });
 }
+function open_mask() {
+  // Access the miniPaint iframe and its relevant functions
+  var miniPaint = document.getElementById('myFrame').contentWindow;
+  var miniPaint_FileOpen = miniPaint.FileOpen;
+  var Layers = miniPaint.Layers;
+
+  // Fetch the JSON file
+  window.fetch("modules/minipaint/images/mask.json").then(function(response) {
+      return response.json();
+  }).then(function(json) {
+      // Extract the layers from the JSON file
+      var newLayers = json.layers || [];
+
+      // Add each new layer to the existing layers in MiniPaint
+      newLayers.forEach(function(layer) {
+          // Ensure the layer data is compatible with MiniPaint's layer structure
+          layer = {
+              ...layer,
+              x: layer.x || 0,
+              y: layer.y || 0,
+              width_original: layer.width,
+              height_original: layer.height,
+              visible: layer.visible !== false, // default to true if not specified
+          };
+
+          // Insert the new layer into MiniPaint
+          Layers.insert(layer);
+      });
+
+      console.log("New layers added successfully from JSON.");
+  }).catch(function(ex) {
+      alert('Sorry, image could not be loaded.');
+      console.error("Error loading JSON file:", ex);
+  });
+}
+
 function openFrame1() {
   openFrame('modules/minipaint/images/ringsimple1.json');
 }
@@ -1444,3 +1587,157 @@ async function applyInpaintRing() {
 
   }, "image/png"); // Ensure the image is in PNG format
 }
+
+async function saveAnimation() {
+  const iframe = document.getElementById('myFrame');
+  
+  if (!iframe) {
+      console.error("Could not find the iframe with ID 'myFrame'.");
+      return;
+  }
+
+  const miniPaintWindow = iframe.contentWindow;
+  
+  if (!miniPaintWindow) {
+      console.error("Could not access the iframe content window.");
+      return;
+  }
+
+  const Layers = miniPaintWindow.Layers;
+  if (!Layers) {
+      console.error("Could not access Layers object from the iframe.");
+      return;
+  }
+
+  const allLayers = Layers.get_layers();
+
+  if (allLayers.length === 0) {
+      ui.notifications.warn("No layers to save.");
+      return;
+  }
+
+  // Simulate clicking the "Reset zoom level" button
+  const resetZoomButton = miniPaintWindow.document.getElementById('zoom_100');
+  if (resetZoomButton) {
+      resetZoomButton.click();
+  } else {
+      console.error("Could not find the zoom reset button.");
+      return;
+  }
+
+  // Wait a short moment to ensure the zoom reset completes
+  await new Promise(resolve => setTimeout(resolve, 500));
+
+  // Retrieve delay value from the input field
+  let delay = 150; // default delay
+
+  const delayInput = miniPaintWindow.document.querySelector('input[type="number"][aria-labelledby="attribute_label_delay"]');
+  if (delayInput && delayInput.value) {
+      delay = parseInt(delayInput.value);
+      if (isNaN(delay) || delay < 1 || delay > 999) {
+          delay = 150; // Fallback to default if the value is out of range
+      }
+  }
+
+  // Create a GIF encoder
+  const gif = new GIF({
+      workers: 4,
+      quality: 15,
+      workerScript: 'modules/minipaint/js/gif.worker.js',
+      dither: 'Atkinson-serpentine',
+      debug: true
+  });
+
+  const canvas = Layers.canvas;
+  const canvasWidth = canvas.width;
+  const canvasHeight = canvas.height;
+
+  for (let i = allLayers.length - 1; i >= 0; i--) {
+      const layer = allLayers[i];
+
+      // Create an offscreen canvas to capture the layer's content
+      const offscreenCanvas = document.createElement('canvas');
+      offscreenCanvas.width = canvasWidth;
+      offscreenCanvas.height = canvasHeight;
+      const offscreenCtx = offscreenCanvas.getContext('2d');
+
+      // Clear the offscreen canvas
+      offscreenCtx.clearRect(0, 0, offscreenCanvas.width, offscreenCanvas.height);
+
+      // Use the render_object function to draw the layer
+      Layers.render_object(offscreenCtx, layer);
+      gif.addFrame(offscreenCanvas, { delay: delay, copy: true });
+  }
+
+  // Render the GIF and save it to Foundry
+  gif.on('finished', async function (blob) {
+      // Prompt for filename
+      const dialogContent = `
+          <div>
+              <label for="filename">Enter a filename (with extension, e.g., animation.gif):</label>
+              <input type="text" id="filename" name="filename" value="animation.gif" style="width:100%" />
+          </div>
+      `;
+
+      new Dialog({
+          title: "Save Animated GIF to Foundry",
+          content: dialogContent,
+          buttons: {
+              save: {
+                  label: "Save",
+                  callback: async (html) => {
+                      let fileName = html.find('input[name="filename"]').val();
+
+                      // Validate the file extension
+                      const validExtensions = ['gif'];
+                      let extension = fileName.split('.').pop().toLowerCase();
+
+                      if (!validExtensions.includes(extension)) {
+                          ui.notifications.error('Invalid file extension. Please use .gif');
+                          return;
+                      }
+
+                      // Set the directory to miniMapNewTiles
+                      const directoryPath = "miniMapNewTiles";
+
+                      // Ensure the directory exists
+                      try {
+                          await FilePicker.browse("data", directoryPath);
+                      } catch (error) {
+                          if (error.message.includes("does not exist")) {
+                              try {
+                                  await FilePicker.createDirectory("data", directoryPath);
+                              } catch (creationError) {
+                                  ui.notifications.error("Failed to create the miniMapNewTiles directory.");
+                                  return;
+                              }
+                          } else {
+                              ui.notifications.error("Error accessing the miniMapNewTiles directory.");
+                              return;
+                          }
+                      }
+
+                      // Create a File object from the Blob with the provided filename
+                      const file = new File([blob], fileName, { type: 'image/gif' });
+
+                      // Upload the GIF file, overwriting if it already exists
+                      const response = await FilePicker.upload("data", directoryPath, file, {});
+
+                      if (response.path) {
+                          ui.notifications.info(`Animation saved successfully as ${fileName} in ${directoryPath}.`);
+                      } else {
+                          ui.notifications.error("Failed to save the GIF to Foundry.");
+                      }
+                  }
+              },
+              cancel: {
+                  label: "Cancel"
+              }
+          },
+          default: "save"
+      }).render(true);
+  });
+
+  gif.render();
+}
+
