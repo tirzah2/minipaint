@@ -6,6 +6,14 @@ Support Me on Ko-Fi! :D
 miniPaint is a powerful, browser-based image editor that now integrates seamlessly with FoundryVTT, allowing Game Masters to edit and manage images directly within the FoundryVTT environment. This integration brings the full power of miniPaint’s tools to your tabletop RPG experience.
 
 # New
+2.3 Added special effects (bottom bar), added Hide all and Show all to the layers box. Added Layers FX (multi-filters) button above the layers box, that is for filters that you can apply to all layers with one click (good for changing animations). The special effects (bottom bar) are:
+    - Hexagone Pixelate
+    - Cute Blur effect
+    - Ink effect
+    - Edges
+    - Dotted screen
+    - Multitone dotted screen
+You can also apply them on all layers thanks to a checkbox in the dialog.
 2.2 Added animation editor (webm instead of gifs and also Layers FX for animations that applies multi effects to each layer)
 - Now works also with tokens and items
 - If you have a token or a tile selected while opening minipaint, it will be automatically imported
