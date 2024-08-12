@@ -327,6 +327,44 @@ saveAsMenuItem.parentNode.insertBefore(saveItemMenuItem, saveTokenMenuItem);
     }
   });
 }
+
+            iframeDocument.getElementById('showall').addEventListener('click', function() {
+                // Call the function defined in minipaint.js
+                window.parent.showAllLayers();
+            });
+
+            iframeDocument.getElementById('hideall').addEventListener('click', function() {
+                // Call the function defined in minipaint.js
+                window.parent.hideAllLayers();
+            });
+            
+            iframeDocument.getElementById('hexa').addEventListener('click', function() {
+                // Call the function defined in minipaint.js
+                window.parent.showHexagonalPixelateDialog();
+            });
+            iframeDocument.getElementById('ink').addEventListener('click', function() {
+                // Call the function defined in minipaint.js
+                window.parent.showInkEffectDialog();
+            });
+            iframeDocument.getElementById('mazify').addEventListener('click', function() {
+                // Call the function defined in minipaint.js
+                window.parent.showEdgeWorkEffectDialog();
+            });
+            iframeDocument.getElementById('dotscreen').addEventListener('click', function() {
+    // Call the function defined in minipaint.js
+    window.parent.showDotScreenEffectDialog();
+});
+iframeDocument.getElementById('colorHalftone').addEventListener('click', function() {
+    // Call the function defined in minipaint.js
+    window.parent.showColorHalftoneEffectDialog();
+});
+// Attach event listener to the Lens Blur button
+iframeDocument.getElementById('lensBlurButton').addEventListener('click', function() {
+    // Call the function defined in minipaint.js to show the Lens Blur effect dialog
+    window.parent.showLensBlurEffectDialog();
+});
+
+
 const fxButton = iframeDocument.getElementById('multieffect');
 
 if (fxButton) {

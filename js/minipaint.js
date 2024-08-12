@@ -2142,3 +2142,881 @@ async function applyFiltersToAllLayersWithPreview() {
       }
   }).render(true);
 }
+// Function to show all layers
+function showAllLayers() {
+  const iframe = document.getElementById('myFrame');
+  
+  if (!iframe) {
+      console.error("Could not find the iframe with ID 'myFrame'.");
+      return;
+  }
+
+  const miniPaintWindow = iframe.contentWindow;
+  
+  if (!miniPaintWindow) {
+      console.error("Could not access the iframe content window.");
+      return;
+  }
+
+  const Layers = miniPaintWindow.Layers;
+  
+  if (!Layers) {
+      console.error("Could not access Layers object from the iframe.");
+      return;
+  }
+
+  const allLayers = Layers.get_layers();
+  
+  for (let i = 0; i < allLayers.length; i++) {
+      const layer = allLayers[i];
+      layer.visible = true; // Show the layer
+  }
+  
+  // Re-render layers and refresh the GUI to apply the changes
+  Layers.render();  // Render all layers
+  Layers.refresh_gui();  // Refresh the layers' HTML to reflect the changes
+  console.log("All layers are now visible.");
+}
+// Function to hide all layers
+function hideAllLayers() {
+  const iframe = document.getElementById('myFrame');
+  
+  if (!iframe) {
+      console.error("Could not find the iframe with ID 'myFrame'.");
+      return;
+  }
+
+  const miniPaintWindow = iframe.contentWindow;
+  
+  if (!miniPaintWindow) {
+      console.error("Could not access the iframe content window.");
+      return;
+  }
+
+  const Layers = miniPaintWindow.Layers;
+  
+  if (!Layers) {
+      console.error("Could not access Layers object from the iframe.");
+      return;
+  }
+
+  const allLayers = Layers.get_layers();
+  
+  for (let i = 0; i < allLayers.length; i++) {
+    const layer = allLayers[i];
+    layer.visible = false; // Hide the layer
+}
+  
+  // Re-render layers and refresh the GUI to apply the changes
+  Layers.render();  // Render all layers
+  Layers.refresh_gui();  // Refresh the layers' HTML to reflect the changes
+  console.log("All layers are now hidden.");
+}
+
+let fxCanvas = null;
+let texture = null;
+
+function showHexagonalPixelateDialog() {
+    // Create a dialog to collect parameters and preview the effect
+    new Dialog({
+        title: "Hexagonal Pixelate Effect",
+        content: `
+            <div style="display: flex; align-items: flex-start;">
+                <form id="hexPixelateForm" style="flex: 1;">
+                    <div class="form-group">
+                        <label>Center X:</label>
+                        <input type="range" name="centerX" value="0.5" min="0" max="1" step="0.01"/>
+                    </div><hr>
+                    <div class="form-group">
+                        <label>Center Y:</label>
+                        <input type="range" name="centerY" value="0.5" min="0" max="1" step="0.01"/>
+                    </div><hr>
+                    <div class="form-group">
+                        <label>Scale:</label>
+                        <input type="range" name="scale" value="20" min="10" max="100" step="1"/>
+                    </div><hr>
+                                        <div class="form-group">
+                        <input type="checkbox" id="applyToAllCheckbox" />
+                        <label for="applyToAllCheckbox">Apply to All Layers</label>
+                    </div>
+                </form>
+                <div id="previewContainer" style="flex: 1; max-width: 300px; margin-left: 10px;">
+                    <canvas id="previewCanvas" style="max-width: 100%; max-height: 200px; width: auto; height: auto;"></canvas>
+                </div>
+            </div>
+        `,
+        buttons: {
+            apply: {
+                label: "Apply",
+                callback: (html) => {
+                    const centerX = parseFloat(html.find('input[name="centerX"]').val());
+                    const centerY = parseFloat(html.find('input[name="centerY"]').val());
+                    const scale = parseFloat(html.find('input[name="scale"]').val());
+                    applyHexagonalPixelateEffect(centerX, centerY, scale, false); // Apply
+                }
+            },
+            cancel: {
+                label: "Cancel"
+            }
+        },
+        default: "apply",
+        render: (html) => {
+            const updatePreview = () => {
+                const centerX = parseFloat(html.find('input[name="centerX"]').val());
+                const centerY = parseFloat(html.find('input[name="centerY"]').val());
+                const scale = parseFloat(html.find('input[name="scale"]').val());
+                applyHexagonalPixelateEffect(centerX, centerY, scale, true); // Preview
+            };
+
+            // Add event listeners to sliders for real-time preview
+            html.find('input[name="centerX"]').on('input', updatePreview);
+            html.find('input[name="centerY"]').on('input', updatePreview);
+            html.find('input[name="scale"]').on('input', updatePreview);
+
+            // Initial preview
+            updatePreview();
+        },
+        close: () => {
+            // Clean up WebGL context and textures when the dialog is closed
+            if (texture) texture.destroy();
+            if (fxCanvas) fxCanvas = null;
+        }
+    }).render(true);
+}
+
+function applyHexagonalPixelateEffect(centerX, centerY, scale, isPreview) {
+  const iframe = document.getElementById('myFrame');
+  const miniPaintWindow = iframe ? iframe.contentWindow : null;
+  const Layers = miniPaintWindow ? miniPaintWindow.Layers : null;
+
+  if (Layers) {
+      const applyToAll = document.getElementById('applyToAllCheckbox').checked;
+
+      // If applying to all layers
+      if (applyToAll) {
+          const allLayers = Layers.get_layers();
+          allLayers.forEach(layer => {
+              if (layer.type === 'image') {
+                  processLayer(layer.id, centerX, centerY, scale, isPreview, Layers);
+              }
+          });
+      } else {
+          // If applying to the selected layer only
+          const selectedLayer = Layers.get_layer(Layers.selected_layer);
+          if (selectedLayer && selectedLayer.type === 'image') {
+              processLayer(selectedLayer.id, centerX, centerY, scale, isPreview, Layers);
+          } else {
+              console.error('No valid image layer is currently selected.');
+          }
+      }
+  } else {
+      console.error('Could not access Layers object from the iframe.');
+  }
+}
+
+function processLayer(layerId, centerX, centerY, scale, isPreview, Layers) {
+  const layerCanvas = Layers.convert_layer_to_canvas(layerId);
+  if (layerCanvas) {
+      const ctx = layerCanvas.getContext('2d');
+      if (!fxCanvas) {
+          try {
+              fxCanvas = fx.canvas();
+              texture = fxCanvas.texture(layerCanvas);
+          } catch (e) {
+              console.error('WebGL is not supported or failed to create a WebGL canvas:', e);
+              return;
+          }
+      } else {
+          texture.loadContentsOf(layerCanvas);
+      }
+
+      fxCanvas.draw(texture).hexagonalPixelate(centerX * layerCanvas.width, centerY * layerCanvas.height, scale).update();
+
+      if (!isPreview) {
+          const processedImage = fxCanvas.toDataURL('image/png');
+          const img = new Image();
+          img.onload = () => {
+              ctx.clearRect(0, 0, layerCanvas.width, layerCanvas.height);
+              ctx.drawImage(img, 0, 0);
+              Layers.update_layer_image(layerCanvas, layerId);
+              Layers.render();
+          };
+          img.src = processedImage;
+
+          console.log(`Applied 'Hexagonal Pixelate' effect to layer with ID ${layerId}`);
+      } else {
+          const previewCanvas = document.getElementById('previewCanvas');
+          const previewCtx = previewCanvas.getContext('2d');
+          previewCanvas.width = layerCanvas.width;
+          previewCanvas.height = layerCanvas.height;
+          previewCtx.drawImage(fxCanvas, 0, 0);
+      }
+  } else {
+      console.error('Failed to convert layer to canvas.');
+  }
+}
+
+
+function showInkEffectDialog() {
+    // Create a dialog to collect parameters and preview the effect
+    new Dialog({
+        title: "Ink Effect",
+        content: `
+            <div style="display: flex; align-items: flex-start;">
+                <form id="inkEffectForm" style="flex: 1;">
+                    <div class="form-group">
+                        <label>Strength:</label>
+                        <input type="range" name="strength" value="0.5" min="0" max="1" step="0.01"/>
+                    </div><hr>
+                                                            <div class="form-group">
+                        <input type="checkbox" id="applyToAllCheckbox" />
+                        <label for="applyToAllCheckbox">Apply to All Layers</label>
+                    </div>
+                </form>
+                <div id="previewContainer" style="flex: 1; max-width: 300px; margin-left: 10px;">
+                    <canvas id="previewCanvas" style="max-width: 100%; max-height: 200px; width: auto; height: auto;"></canvas>
+                </div>
+            </div>
+        `,
+        buttons: {
+            apply: {
+                label: "Apply",
+                callback: (html) => {
+                    const strength = parseFloat(html.find('input[name="strength"]').val());
+                    applyInkEffect(strength, false); // Apply
+                }
+            },
+            cancel: {
+                label: "Cancel"
+            }
+        },
+        default: "apply",
+        render: (html) => {
+            const updatePreview = () => {
+                const strength = parseFloat(html.find('input[name="strength"]').val());
+                applyInkEffect(strength, true); // Preview
+            };
+
+            // Add event listeners to sliders for real-time preview
+            html.find('input[name="strength"]').on('input', updatePreview);
+
+            // Initial preview
+            updatePreview();
+        },
+        close: () => {
+            // Clean up WebGL context and textures when the dialog is closed
+            if (texture) texture.destroy();
+            if (fxCanvas) fxCanvas = null;
+        }
+    }).render(true);
+}
+function applyInkEffect(strength, isPreview) {
+  const iframe = document.getElementById('myFrame');
+  const miniPaintWindow = iframe ? iframe.contentWindow : null;
+  const Layers = miniPaintWindow ? miniPaintWindow.Layers : null;
+
+  if (Layers) {
+    const applyToAll = document.getElementById('applyToAllCheckbox').checked;
+      if (applyToAll) {
+          const allLayers = Layers.get_layers();
+          allLayers.forEach(layer => {
+              if (layer.type === 'image') {
+                  processInkEffect(layer.id, strength, isPreview, Layers);
+              }
+          });
+      } else {
+          const selectedLayer = Layers.get_layer(Layers.selected_layer);
+          if (selectedLayer && selectedLayer.type === 'image') {
+              processInkEffect(selectedLayer.id, strength, isPreview, Layers);
+          } else {
+              console.error('No valid image layer is currently selected.');
+          }
+      }
+  } else {
+      console.error('Could not access Layers object from the iframe.');
+  }
+}
+
+function processInkEffect(layerId, strength, isPreview, Layers) {
+  const layerCanvas = Layers.convert_layer_to_canvas(layerId);
+  if (layerCanvas) {
+      const ctx = layerCanvas.getContext('2d');
+
+      if (!fxCanvas) {
+          try {
+              fxCanvas = fx.canvas();
+              texture = fxCanvas.texture(layerCanvas);
+          } catch (e) {
+              console.error('WebGL is not supported or failed to create a WebGL canvas:', e);
+              return;
+          }
+      } else {
+          texture.loadContentsOf(layerCanvas);
+      }
+
+      fxCanvas.draw(texture).ink(strength).update();
+
+      if (!isPreview) {
+          const processedImage = fxCanvas.toDataURL('image/png');
+          const img = new Image();
+          img.onload = () => {
+              ctx.clearRect(0, 0, layerCanvas.width, layerCanvas.height);
+              ctx.drawImage(img, 0, 0);
+              Layers.update_layer_image(layerCanvas, layerId);
+              Layers.render();
+          };
+          img.src = processedImage;
+          console.log(`Applied 'Ink' effect to layer with ID ${layerId}`);
+      } else {
+          const previewCanvas = document.getElementById('previewCanvas');
+          const previewCtx = previewCanvas.getContext('2d');
+          previewCanvas.width = layerCanvas.width;
+          previewCanvas.height = layerCanvas.height;
+          previewCtx.drawImage(fxCanvas, 0, 0);
+      }
+  } else {
+      console.error('Failed to convert layer to canvas.');
+  }
+}
+
+function showEdgeWorkEffectDialog() {
+  // Create a dialog to collect parameters and preview the effect
+  new Dialog({
+      title: "Edge Work Effect",
+      content: `
+          <div style="display: flex; align-items: flex-start;">
+              <form id="edgeWorkForm" style="flex: 1;">
+                  <div class="form-group">
+                      <label>Radius:</label>
+                      <input type="range" name="radius" value="1" min="0" max="10" step="0.1"/>
+                  </div>
+                  <hr>                                        <div class="form-group">
+                        <input type="checkbox" id="applyToAllCheckbox" />
+                        <label for="applyToAllCheckbox">Apply to All Layers</label>
+                    </div>
+              </form>
+              <div id="previewContainer" style="flex: 1; max-width: 300px; margin-left: 10px;">
+                  <canvas id="previewCanvas" style="max-width: 100%; max-height: 200px; width: auto; height: auto;"></canvas>
+              </div>
+          </div>
+      `,
+      buttons: {
+          apply: {
+              label: "Apply",
+              callback: (html) => {
+                  const radius = parseFloat(html.find('input[name="radius"]').val());
+                  applyEdgeWorkEffect(radius, false); // Apply
+              }
+          },
+          cancel: {
+              label: "Cancel"
+          }
+      },
+      default: "apply",
+      render: (html) => {
+          const updatePreview = () => {
+              const radius = parseFloat(html.find('input[name="radius"]').val());
+              applyEdgeWorkEffect(radius, true); // Preview
+          };
+
+          // Add event listeners to sliders for real-time preview
+          html.find('input[name="radius"]').on('input', updatePreview);
+
+          // Initial preview
+          updatePreview();
+      },
+      close: () => {
+          // Clean up WebGL context and textures when the dialog is closed
+          if (texture) texture.destroy();
+          if (fxCanvas) fxCanvas = null;
+      }
+  }).render(true);
+}
+function applyEdgeWorkEffect(radius, isPreview) {
+  const iframe = document.getElementById('myFrame');
+  const miniPaintWindow = iframe ? iframe.contentWindow : null;
+  const Layers = miniPaintWindow ? miniPaintWindow.Layers : null;
+
+  if (Layers) {
+    const applyToAll = document.getElementById('applyToAllCheckbox').checked;
+      if (applyToAll) {
+          const allLayers = Layers.get_layers();
+          allLayers.forEach(layer => {
+              if (layer.type === 'image') {
+                  processEdgeWorkEffect(layer.id, radius, isPreview, Layers);
+              }
+          });
+      } else {
+          const selectedLayer = Layers.get_layer(Layers.selected_layer);
+          if (selectedLayer && selectedLayer.type === 'image') {
+              processEdgeWorkEffect(selectedLayer.id, radius, isPreview, Layers);
+          } else {
+              console.error('No valid image layer is currently selected.');
+          }
+      }
+  } else {
+      console.error('Could not access Layers object from the iframe.');
+  }
+}
+
+function processEdgeWorkEffect(layerId, radius, isPreview, Layers) {
+  const layerCanvas = Layers.convert_layer_to_canvas(layerId);
+  if (layerCanvas) {
+      const ctx = layerCanvas.getContext('2d');
+
+      if (!fxCanvas) {
+          try {
+              fxCanvas = fx.canvas();
+              texture = fxCanvas.texture(layerCanvas);
+          } catch (e) {
+              console.error('WebGL is not supported or failed to create a WebGL canvas:', e);
+              return;
+          }
+      } else {
+          texture.loadContentsOf(layerCanvas);
+      }
+
+      fxCanvas.draw(texture).edgeWork(radius).update();
+
+      if (!isPreview) {
+          const processedImage = fxCanvas.toDataURL('image/png');
+          const img = new Image();
+          img.onload = () => {
+              ctx.clearRect(0, 0, layerCanvas.width, layerCanvas.height);
+              ctx.drawImage(img, 0, 0);
+              Layers.update_layer_image(layerCanvas, layerId);
+              Layers.render();
+          };
+          img.src = processedImage;
+          console.log(`Applied 'Edge Work' effect to layer with ID ${layerId}`);
+      } else {
+          const previewCanvas = document.getElementById('previewCanvas');
+          const previewCtx = previewCanvas.getContext('2d');
+          previewCanvas.width = layerCanvas.width;
+          previewCanvas.height = layerCanvas.height;
+          previewCtx.drawImage(fxCanvas, 0, 0);
+      }
+  } else {
+      console.error('Failed to convert layer to canvas.');
+  }
+}
+
+function showDotScreenEffectDialog() {
+  // Create a dialog to collect parameters and preview the effect
+  new Dialog({
+      title: "Dot Screen Effect",
+      content: `
+          <div style="display: flex; align-items: flex-start;">
+              <form id="dotScreenForm" style="flex: 1;">
+                  <div class="form-group">
+                      <label>Center X:</label>
+                      <input type="range" name="centerX" value="0.5" min="0" max="1" step="0.01"/>
+                  </div><hr>
+                  <div class="form-group">
+                      <label>Center Y:</label>
+                      <input type="range" name="centerY" value="0.5" min="0" max="1" step="0.01"/>
+                  </div><hr>
+                  <div class="form-group">
+                      <label>Angle (Radians):</label>
+                      <input type="range" name="angle" value="0.5" min="0" max="6.28" step="0.01"/>
+                  </div><hr>
+                  <div class="form-group">
+                      <label>Size:</label>
+                      <input type="range" name="size" value="3" min="1" max="20" step="0.1"/>
+                  </div><hr>                                        <div class="form-group">
+                        <input type="checkbox" id="applyToAllCheckbox" />
+                        <label for="applyToAllCheckbox">Apply to All Layers</label>
+                    </div>
+              </form>
+              <div id="previewContainer" style="flex: 1; max-width: 300px; margin-left: 10px;">
+                  <canvas id="previewCanvas" style="max-width: 100%; max-height: 200px; width: auto; height: auto;"></canvas>
+              </div>
+          </div>
+      `,
+      buttons: {
+          apply: {
+              label: "Apply",
+              callback: (html) => {
+                  const centerX = parseFloat(html.find('input[name="centerX"]').val());
+                  const centerY = parseFloat(html.find('input[name="centerY"]').val());
+                  const angle = parseFloat(html.find('input[name="angle"]').val());
+                  const size = parseFloat(html.find('input[name="size"]').val());
+                  applyDotScreenEffect(centerX, centerY, angle, size, false); // Apply
+              }
+          },
+          cancel: {
+              label: "Cancel"
+          }
+      },
+      default: "apply",
+      render: (html) => {
+          const updatePreview = () => {
+              const centerX = parseFloat(html.find('input[name="centerX"]').val());
+              const centerY = parseFloat(html.find('input[name="centerY"]').val());
+              const angle = parseFloat(html.find('input[name="angle"]').val());
+              const size = parseFloat(html.find('input[name="size"]').val());
+              applyDotScreenEffect(centerX, centerY, angle, size, true); // Preview
+          };
+
+          // Add event listeners to sliders for real-time preview
+          html.find('input[name="centerX"]').on('input', updatePreview);
+          html.find('input[name="centerY"]').on('input', updatePreview);
+          html.find('input[name="angle"]').on('input', updatePreview);
+          html.find('input[name="size"]').on('input', updatePreview);
+
+          // Initial preview
+          updatePreview();
+      },
+      close: () => {
+          // Clean up WebGL context and textures when the dialog is closed
+          if (texture) texture.destroy();
+          if (fxCanvas) fxCanvas = null;
+      }
+  }).render(true);
+}
+function applyDotScreenEffect(centerX, centerY, angle, size, isPreview) {
+  const iframe = document.getElementById('myFrame');
+  const miniPaintWindow = iframe ? iframe.contentWindow : null;
+  const Layers = miniPaintWindow ? miniPaintWindow.Layers : null;
+
+  if (Layers) {
+    const applyToAll = document.getElementById('applyToAllCheckbox').checked;
+      if (applyToAll) {
+          const allLayers = Layers.get_layers();
+          allLayers.forEach(layer => {
+              if (layer.type === 'image') {
+                  processDotScreenEffect(layer.id, centerX, centerY, angle, size, isPreview, Layers);
+              }
+          });
+      } else {
+          const selectedLayer = Layers.get_layer(Layers.selected_layer);
+          if (selectedLayer && selectedLayer.type === 'image') {
+              processDotScreenEffect(selectedLayer.id, centerX, centerY, angle, size, isPreview, Layers);
+          } else {
+              console.error('No valid image layer is currently selected.');
+          }
+      }
+  } else {
+      console.error('Could not access Layers object from the iframe.');
+  }
+}
+
+function processDotScreenEffect(layerId, centerX, centerY, angle, size, isPreview, Layers) {
+  const layerCanvas = Layers.convert_layer_to_canvas(layerId);
+  if (layerCanvas) {
+      const ctx = layerCanvas.getContext('2d');
+
+      if (!fxCanvas) {
+          try {
+              fxCanvas = fx.canvas();
+              texture = fxCanvas.texture(layerCanvas);
+          } catch (e) {
+              console.error('WebGL is not supported or failed to create a WebGL canvas:', e);
+              return;
+          }
+      } else {
+          texture.loadContentsOf(layerCanvas);
+      }
+
+      fxCanvas.draw(texture).dotScreen(centerX * layerCanvas.width, centerY * layerCanvas.height, angle, size).update();
+
+      if (!isPreview) {
+          const processedImage = fxCanvas.toDataURL('image/png');
+          const img = new Image();
+          img.onload = () => {
+              ctx.clearRect(0, 0, layerCanvas.width, layerCanvas.height);
+              ctx.drawImage(img, 0, 0);
+              Layers.update_layer_image(layerCanvas, layerId);
+              Layers.render();
+          };
+          img.src = processedImage;
+          console.log(`Applied 'Dot Screen' effect to layer with ID ${layerId}`);
+      } else {
+          const previewCanvas = document.getElementById('previewCanvas');
+          const previewCtx = previewCanvas.getContext('2d');
+          previewCanvas.width = layerCanvas.width;
+          previewCanvas.height = layerCanvas.height;
+          previewCtx.drawImage(fxCanvas, 0, 0);
+      }
+  } else {
+      console.error('Failed to convert layer to canvas.');
+  }
+}
+
+function showColorHalftoneEffectDialog() {
+  // Create a dialog to collect parameters and preview the effect
+  new Dialog({
+      title: "Color Halftone Effect",
+      content: `
+          <div style="display: flex; align-items: flex-start;">
+              <form id="colorHalftoneForm" style="flex: 1;">
+                  <div class="form-group">
+                      <label>Center X:</label>
+                      <input type="range" name="centerX" value="0.5" min="0" max="1" step="0.01"/>
+                  </div><hr>
+                  <div class="form-group">
+                      <label>Center Y:</label>
+                      <input type="range" name="centerY" value="0.5" min="0" max="1" step="0.01"/>
+                  </div><hr>
+                  <div class="form-group">
+                      <label>Angle (Radians):</label>
+                      <input type="range" name="angle" value="0.5" min="0" max="6.28" step="0.01"/>
+                  </div><hr>
+                  <div class="form-group">
+                      <label>Size:</label>
+                      <input type="range" name="size" value="5" min="1" max="20" step="0.1"/>
+                  </div><hr>                                        <div class="form-group">
+                        <input type="checkbox" id="applyToAllCheckbox" />
+                        <label for="applyToAllCheckbox">Apply to All Layers</label>
+                    </div>
+              </form>
+              <div id="previewContainer" style="flex: 1; max-width: 300px; margin-left: 10px;">
+                  <canvas id="previewCanvas" style="max-width: 100%; max-height: 200px; width: auto; height: auto;"></canvas>
+              </div>
+          </div>
+      `,
+      buttons: {
+          apply: {
+              label: "Apply",
+              callback: (html) => {
+                  const centerX = parseFloat(html.find('input[name="centerX"]').val());
+                  const centerY = parseFloat(html.find('input[name="centerY"]').val());
+                  const angle = parseFloat(html.find('input[name="angle"]').val());
+                  const size = parseFloat(html.find('input[name="size"]').val());
+                  applyColorHalftoneEffect(centerX, centerY, angle, size, false); // Apply
+              }
+          },
+          cancel: {
+              label: "Cancel"
+          }
+      },
+      default: "apply",
+      render: (html) => {
+          const updatePreview = () => {
+              const centerX = parseFloat(html.find('input[name="centerX"]').val());
+              const centerY = parseFloat(html.find('input[name="centerY"]').val());
+              const angle = parseFloat(html.find('input[name="angle"]').val());
+              const size = parseFloat(html.find('input[name="size"]').val());
+              applyColorHalftoneEffect(centerX, centerY, angle, size, true); // Preview
+          };
+
+          // Add event listeners to sliders for real-time preview
+          html.find('input[name="centerX"]').on('input', updatePreview);
+          html.find('input[name="centerY"]').on('input', updatePreview);
+          html.find('input[name="angle"]').on('input', updatePreview);
+          html.find('input[name="size"]').on('input', updatePreview);
+
+          // Initial preview
+          updatePreview();
+      },
+      close: () => {
+          // Clean up WebGL context and textures when the dialog is closed
+          if (texture) texture.destroy();
+          if (fxCanvas) fxCanvas = null;
+      }
+  }).render(true);
+}
+
+function applyColorHalftoneEffect(centerX, centerY, angle, size, isPreview) {
+  const iframe = document.getElementById('myFrame');
+  const miniPaintWindow = iframe ? iframe.contentWindow : null;
+  const Layers = miniPaintWindow ? miniPaintWindow.Layers : null;
+
+  if (Layers) {
+    const applyToAll = document.getElementById('applyToAllCheckbox').checked;
+      if (applyToAll) {
+          const allLayers = Layers.get_layers();
+          allLayers.forEach(layer => {
+              if (layer.type === 'image') {
+                  processColorHalftoneEffect(layer.id, centerX, centerY, angle, size, isPreview, Layers);
+              }
+          });
+      } else {
+          const selectedLayer = Layers.get_layer(Layers.selected_layer);
+          if (selectedLayer && selectedLayer.type === 'image') {
+              processColorHalftoneEffect(selectedLayer.id, centerX, centerY, angle, size, isPreview, Layers);
+          } else {
+              console.error('No valid image layer is currently selected.');
+          }
+      }
+  } else {
+      console.error('Could not access Layers object from the iframe.');
+  }
+}
+
+function processColorHalftoneEffect(layerId, centerX, centerY, angle, size, isPreview, Layers) {
+  const layerCanvas = Layers.convert_layer_to_canvas(layerId);
+  if (layerCanvas) {
+      const ctx = layerCanvas.getContext('2d');
+
+      if (!fxCanvas) {
+          try {
+              fxCanvas = fx.canvas();
+              texture = fxCanvas.texture(layerCanvas);
+          } catch (e) {
+              console.error('WebGL is not supported or failed to create a WebGL canvas:', e);
+              return;
+          }
+      } else {
+          texture.loadContentsOf(layerCanvas);
+      }
+
+      fxCanvas.draw(texture).colorHalftone(centerX * layerCanvas.width, centerY * layerCanvas.height, angle, size).update();
+
+      if (!isPreview) {
+          const processedImage = fxCanvas.toDataURL('image/png');
+          const img = new Image();
+          img.onload = () => {
+              ctx.clearRect(0, 0, layerCanvas.width, layerCanvas.height);
+              ctx.drawImage(img, 0, 0);
+              Layers.update_layer_image(layerCanvas, layerId);
+              Layers.render();
+          };
+          img.src = processedImage;
+          console.log(`Applied 'Color Halftone' effect to layer with ID ${layerId}`);
+      } else {
+          const previewCanvas = document.getElementById('previewCanvas');
+          const previewCtx = previewCanvas.getContext('2d');
+          previewCanvas.width = layerCanvas.width;
+          previewCanvas.height = layerCanvas.height;
+          previewCtx.drawImage(fxCanvas, 0, 0);
+      }
+  } else {
+      console.error('Failed to convert layer to canvas.');
+  }
+}
+
+function showLensBlurEffectDialog() {
+  new Dialog({
+      title: "Lens Blur Effect",
+      content: `
+          <div style="display: flex; align-items: flex-start;">
+              <form id="lensBlurForm" style="flex: 1;">
+                  <div class="form-group">
+                      <label>Blur Radius:</label>
+                      <input type="range" name="radius" value="10" min="0" max="50" step="0.1"/>
+                  </div><hr>
+                  <div class="form-group">
+                      <label>Brightness:</label>
+                      <input type="range" name="brightness" value="0.75" min="-1" max="1" step="0.01"/>
+                  </div><hr>
+                  <div class="form-group">
+                      <label>Angle:</label>
+                      <input type="range" name="angle" value="0" min="-3.14" max="3.14" step="0.01"/>
+                  </div><hr>                                        <div class="form-group">
+                        <input type="checkbox" id="applyToAllCheckbox" />
+                        <label for="applyToAllCheckbox">Apply to All Layers</label>
+                    </div>
+              </form>
+              <div id="previewContainer" style="flex: 1; max-width: 300px; margin-left: 10px;">
+                  <canvas id="previewCanvas" style="max-width: 100%; max-height: 300px; width: auto; height: auto;"></canvas>
+              </div>
+          </div>
+      `,
+      buttons: {
+          apply: {
+              label: "Apply",
+              callback: (html) => {
+                  const radius = parseFloat(html.find('input[name="radius"]').val());
+                  const brightness = parseFloat(html.find('input[name="brightness"]').val());
+                  const angle = parseFloat(html.find('input[name="angle"]').val());
+                  applyLensBlurEffect(radius, brightness, angle, false); // Apply
+              }
+          },
+          cancel: {
+              label: "Cancel"
+          }
+      },
+      default: "apply",
+      render: (html) => {
+          const updatePreview = () => {
+              const radius = parseFloat(html.find('input[name="radius"]').val());
+              const brightness = parseFloat(html.find('input[name="brightness"]').val());
+              const angle = parseFloat(html.find('input[name="angle"]').val());
+              applyLensBlurEffect(radius, brightness, angle, true); // Preview
+          };
+
+          // Add event listeners to sliders for real-time preview
+          html.find('input[type="range"]').on('input', updatePreview);
+
+          // Initial preview
+          updatePreview();
+      },
+      close: () => {
+          // Clean up WebGL context and textures when the dialog is closed
+          if (texture) texture.destroy();
+          if (fxCanvas) fxCanvas = null;
+      }
+  }).render(true);
+}
+
+function applyLensBlurEffect(radius, brightness, angle, isPreview) {
+  const iframe = document.getElementById('myFrame');
+  const miniPaintWindow = iframe ? iframe.contentWindow : null;
+  const Layers = miniPaintWindow ? miniPaintWindow.Layers : null;
+
+  if (Layers) {
+    const applyToAll = document.getElementById('applyToAllCheckbox').checked;
+      if (applyToAll) {
+          const allLayers = Layers.get_layers();
+          allLayers.forEach(layer => {
+              if (layer.type === 'image') {
+                  processLensBlurEffect(layer.id, radius, brightness, angle, isPreview, Layers);
+              }
+          });
+      } else {
+          const selectedLayer = Layers.get_layer(Layers.selected_layer);
+          if (selectedLayer && selectedLayer.type === 'image') {
+              processLensBlurEffect(selectedLayer.id, radius, brightness, angle, isPreview, Layers);
+          } else {
+              console.error('No valid image layer is currently selected.');
+          }
+      }
+  } else {
+      console.error('Could not access Layers object from the iframe.');
+  }
+}
+
+function processLensBlurEffect(layerId, radius, brightness, angle, isPreview, Layers) {
+  const layerCanvas = Layers.convert_layer_to_canvas(layerId);
+  if (layerCanvas) {
+      const ctx = layerCanvas.getContext('2d');
+
+      if (!fxCanvas) {
+          try {
+              fxCanvas = fx.canvas();
+              texture = fxCanvas.texture(layerCanvas);
+          } catch (e) {
+              console.error('WebGL is not supported or failed to create a WebGL canvas:', e);
+              return;
+          }
+      } else {
+          texture.loadContentsOf(layerCanvas);
+      }
+
+      fxCanvas.draw(texture).lensBlur(radius, brightness, angle).update();
+
+      if (!isPreview) {
+          const processedImage = fxCanvas.toDataURL('image/png');
+          const img = new Image();
+          img.onload = () => {
+              ctx.clearRect(0, 0, layerCanvas.width, layerCanvas.height);
+              ctx.drawImage(img, 0, 0);
+              Layers.update_layer_image(layerCanvas, layerId);
+              Layers.render();
+          };
+          img.src = processedImage;
+          console.log(`Applied 'Lens Blur' effect to layer with ID ${layerId}`);
+      } else {
+          const previewCanvas = document.getElementById('previewCanvas');
+          const previewCtx = previewCanvas.getContext('2d');
+          previewCanvas.width = layerCanvas.width;
+          previewCanvas.height = layerCanvas.height;
+          previewCtx.drawImage(fxCanvas, 0, 0);
+      }
+  } else {
+      console.error('Failed to convert layer to canvas.');
+  }
+}
+
+
