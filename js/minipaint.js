@@ -754,34 +754,128 @@ function addFramesAsLayersToMiniPaint(framesDataUrls) {
   });
 }
 
-// Function to open the FilePicker and load a GIF
-async function browseAndOpenGifInMiniPaint() {
-const picker = new FilePicker({
-  type: "image",
-  callback: (path) => {
-    if (!path) {
-      ui.notifications.warn("No image selected.");
-      return;
-    }
 
-    // Load the selected GIF file into MiniPaint
-    loadGifAsArrayBuffer(path).then(gifArrayBuffer => {
-        const framesDataUrls = extractFramesFromGif(gifArrayBuffer);
-        addFramesAsLayersToMiniPaint(framesDataUrls);
-    });
-  },
-  top: 100,
-  left: 100,
-  button: "Browse"
-});
+// Functions to load and process the WebM file
+async function openGif() {
+  console.log("Opening FilePicker to select a WebM file...");
 
-picker.render(true);
+  // Open the FilePicker to select a WebM file
+  const picker = new FilePicker({
+      type: "video",
+      callback: async (path) => {
+          if (!path) {
+              ui.notifications.warn("No video selected.");
+              return;
+          }
+
+          console.log(`Selected WebM file: ${path}`);
+
+          // Load the selected WebM file into memory
+          const webmArrayBuffer = await loadWebmAsArrayBuffer(path);
+          console.log("WebM file loaded into memory.");
+
+          // Extract frames from the WebM file
+          const framesDataUrls = await extractFramesFromWebm(webmArrayBuffer);
+          console.log(`Extracted ${framesDataUrls.length} frames from the WebM file.`);
+
+          // Load extracted frames as layers in MiniPaint
+          addFramesAsLayersToMiniPaint(framesDataUrls);
+      },
+      top: 100,
+      left: 100,
+      button: "Browse"
+  });
+
+  picker.render(true);
 }
 
-// Function to be called when "Open GIF" menu item is clicked
-function openGif() {
-  browseAndOpenGifInMiniPaint();
+// Functions to load and process the WebM file
+async function loadWebmAsArrayBuffer(webmUrl) {
+  const response = await fetch(webmUrl);
+  return response.arrayBuffer();
 }
+
+async function extractFramesFromWebm(webmArrayBuffer) {
+  const video = document.createElement('video');
+  video.src = URL.createObjectURL(new Blob([webmArrayBuffer], { type: 'video/webm' }));
+  video.muted = true;
+  video.currentTime = 0;
+  
+  const framesDataUrls = [];
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  const frameSkip = 1; // Number of frames to skip between captures
+
+  return new Promise((resolve, reject) => {
+      video.onloadedmetadata = () => {
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+
+          let frameCounter = 0;
+
+          const captureFrame = () => {
+              ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
+              ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+              framesDataUrls.push(canvas.toDataURL());
+          };
+
+          const extractFrames = () => {
+              frameCounter++;
+
+              if (frameCounter % frameSkip === 0) {
+                  captureFrame();
+              }
+
+              // If we have more time in the video, seek to the next frame
+              if (video.currentTime < video.duration) {
+                  video.currentTime += 1 / 30; // Assuming 30 FPS, adjust as needed
+              } else {
+                  resolve(framesDataUrls); // Resolve when the end of the video is reached
+              }
+          };
+
+          // Set an event listener for when the video seek operation completes
+          video.ontimeupdate = extractFrames;
+
+          // Start the frame extraction process by seeking to the first frame
+          extractFrames();
+      };
+
+      video.onerror = () => {
+          reject(new Error("Failed to load the WebM file."));
+      };
+  });
+}
+
+// Function to add each frame as a new layer in MiniPaint
+function addFramesAsLayersToMiniPaint(framesDataUrls) {
+  const myFrame = document.getElementById('myFrame');
+  const Layers = myFrame.contentWindow.Layers;
+
+  framesDataUrls.forEach((frameDataUrl, frameNumber) => {
+      const img = new Image();
+      img.src = frameDataUrl;
+
+      img.onload = () => {
+          const name = `WebM Frame ${frameNumber + 1}`;
+          const new_layer = {
+              name: name,
+              type: 'image',
+              data: img,
+              width: img.naturalWidth || img.width,
+              height: img.naturalHeight || img.height,
+              width_original: img.naturalWidth || img.width,
+              height_original: img.naturalHeight || img.height,
+          };
+          Layers.insert(new_layer);
+      };
+
+      img.onerror = () => {
+          ui.notifications.error(`Failed to load frame ${frameNumber + 1} of the WebM.`);
+      };
+  });
+}
+
 
 // Usage example - remove hardcoded GIF URL and replace with dynamic file picker
 
@@ -1639,105 +1733,412 @@ async function saveAnimation() {
       }
   }
 
-  // Create a GIF encoder
-  const gif = new GIF({
-      workers: 4,
-      quality: 15,
-      workerScript: 'modules/minipaint/js/gif.worker.js',
-      dither: 'Atkinson-serpentine',
-      debug: true
-  });
-
   const canvas = Layers.canvas;
   const canvasWidth = canvas.width;
   const canvasHeight = canvas.height;
 
-  for (let i = allLayers.length - 1; i >= 0; i--) {
-      const layer = allLayers[i];
-
-      // Create an offscreen canvas to capture the layer's content
-      const offscreenCanvas = document.createElement('canvas');
-      offscreenCanvas.width = canvasWidth;
-      offscreenCanvas.height = canvasHeight;
-      const offscreenCtx = offscreenCanvas.getContext('2d');
-
-      // Clear the offscreen canvas
-      offscreenCtx.clearRect(0, 0, offscreenCanvas.width, offscreenCanvas.height);
-
-      // Use the render_object function to draw the layer
-      Layers.render_object(offscreenCtx, layer);
-      gif.addFrame(offscreenCanvas, { delay: delay, copy: true });
+  // Ensure the canvas stream is valid
+  const stream = canvas.captureStream(30); // 30 FPS, adjust as needed
+  if (!stream) {
+      console.error("Failed to capture stream from canvas.");
+      return;
   }
 
-  // Render the GIF and save it to Foundry
-  gif.on('finished', async function (blob) {
-      // Prompt for filename
-      const dialogContent = `
-          <div>
-              <label for="filename">Enter a filename (with extension, e.g., animation.gif):</label>
-              <input type="text" id="filename" name="filename" value="animation.gif" style="width:100%" />
-          </div>
-      `;
+  const chunks = [];
+  const mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9' });
 
-      new Dialog({
-          title: "Save Animated GIF to Foundry",
-          content: dialogContent,
-          buttons: {
-              save: {
-                  label: "Save",
-                  callback: async (html) => {
-                      let fileName = html.find('input[name="filename"]').val();
+  mediaRecorder.ondataavailable = (event) => {
+      if (event.data.size > 0) {
+          console.log("Data available from MediaRecorder:", event.data);
+          chunks.push(event.data);
+      }
+  };
 
-                      // Validate the file extension
-                      const validExtensions = ['gif'];
-                      let extension = fileName.split('.').pop().toLowerCase();
+  mediaRecorder.onerror = (event) => {
+      console.error("MediaRecorder error:", event.error);
+      ui.notifications.error("Recording failed due to an error.");
+  };
 
-                      if (!validExtensions.includes(extension)) {
-                          ui.notifications.error('Invalid file extension. Please use .gif');
-                          return;
-                      }
+  mediaRecorder.onstop = async () => {
+      console.log("MediaRecorder stopped");
 
-                      // Set the directory to miniMapNewTiles
-                      const directoryPath = "miniMapNewTiles";
+      if (chunks.length > 0) {
+          const blob = new Blob(chunks, { type: 'video/webm' });
+          const dialogContent = `
+              <div>
+                  <label for="filename">Enter a filename (with extension, e.g., animation.webm):</label>
+                  <input type="text" id="filename" name="filename" value="animation.webm" style="width:100%" />
+              </div>
+          `;
 
-                      // Ensure the directory exists
-                      try {
-                          await FilePicker.browse("data", directoryPath);
-                      } catch (error) {
-                          if (error.message.includes("does not exist")) {
-                              try {
-                                  await FilePicker.createDirectory("data", directoryPath);
-                              } catch (creationError) {
-                                  ui.notifications.error("Failed to create the miniMapNewTiles directory.");
-                                  return;
-                              }
-                          } else {
-                              ui.notifications.error("Error accessing the miniMapNewTiles directory.");
+          new Dialog({
+              title: "Save WebM to Foundry",
+              content: dialogContent,
+              buttons: {
+                  save: {
+                      label: "Save",
+                      callback: async (html) => {
+                          let fileName = html.find('input[name="filename"]').val();
+
+                          // Validate file extension
+                          if (!fileName.endsWith('.webm')) {
+                              ui.notifications.error('Invalid file extension. Please use .webm');
                               return;
                           }
+
+                          const directoryPath = "miniMapNewTiles";
+                          const file = new File([blob], fileName, { type: 'video/webm' });
+
+                          // Ensure the directory exists, create it if not
+                          try {
+                              await FilePicker.browse("data", directoryPath);
+                          } catch (error) {
+                              if (error.message.includes("does not exist")) {
+                                  try {
+                                      await FilePicker.createDirectory("data", directoryPath);
+                                  } catch (creationError) {
+                                      ui.notifications.error("Failed to create the directory.");
+                                      return;
+                                  }
+                              } else {
+                                  ui.notifications.error("Error accessing the directory.");
+                                  return;
+                              }
+                          }
+
+                          const response = await FilePicker.upload("data", directoryPath, file, {});
+                          if (response.path) {
+                              ui.notifications.info(`Animation saved successfully as ${fileName} in ${directoryPath}.`);
+                          } else {
+                              ui.notifications.error("Failed to save the WebM to Foundry.");
+                          }
                       }
-
-                      // Create a File object from the Blob with the provided filename
-                      const file = new File([blob], fileName, { type: 'image/gif' });
-
-                      // Upload the GIF file, overwriting if it already exists
-                      const response = await FilePicker.upload("data", directoryPath, file, {});
-
-                      if (response.path) {
-                          ui.notifications.info(`Animation saved successfully as ${fileName} in ${directoryPath}.`);
-                      } else {
-                          ui.notifications.error("Failed to save the GIF to Foundry.");
-                      }
-                  }
+                  },
+                  cancel: { label: "Cancel" }
               },
-              cancel: {
-                  label: "Cancel"
-              }
-          },
-          default: "save"
-      }).render(true);
-  });
+              default: "save"
+          }).render(true);
+      } else {
+          ui.notifications.error("Recording failed. No data available.");
+      }
+  };
 
-  gif.render();
+  mediaRecorder.start();
+  console.log("MediaRecorder started");
+
+  // Render each frame in sequence with a delay, in correct order
+  for (let i = 0; i < allLayers.length; i++) {
+      const layer = allLayers[i];
+      const ctx = canvas.getContext('2d');
+
+      // Clear the canvas with transparency
+      ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+      ctx.globalCompositeOperation = 'source-over';
+
+      // Render the current layer
+      Layers.render_object(ctx, layer);
+      console.log(`Rendered frame ${i + 1}`);
+
+      // Force canvas update
+      ctx.drawImage(canvas, 0, 0);
+
+      await new Promise(resolve => setTimeout(resolve, delay)); // Delay to simulate frame rate
+  }
+
+  // Add a small delay to ensure the last frame is captured
+  await new Promise(resolve => setTimeout(resolve, 300));
+
+  mediaRecorder.stop(); // Stop recording after all frames are rendered
+  console.log("All frames rendered, stopping MediaRecorder...");
 }
 
+async function applyFiltersToAllLayersWithPreview() {
+  const iframe = document.getElementById('myFrame');
+  
+  if (!iframe) {
+      console.error("Could not find the iframe with ID 'myFrame'.");
+      return;
+  }
+
+  const miniPaintWindow = iframe.contentWindow;
+  
+  if (!miniPaintWindow) {
+      console.error("Could not access the iframe content window.");
+      return;
+  }
+
+  const Layers = miniPaintWindow.Layers;
+
+  if (!Layers) {
+      console.error("Could not access Layers object from the iframe.");
+      return;
+  }
+
+  const allLayers = Layers.get_layers();
+  
+  if (allLayers.length === 0) {
+      console.warn("No layers found.");
+      return;
+  }
+
+  // Store the initial filters to restore if the dialog is canceled
+  const originalFilters = allLayers.map(layer => [...(layer.filters || [])]);
+
+  let filtersApplied = false;  // Flag to track if filters were applied
+
+  // Function to apply the preview to all layers
+  function applyPreview(filters) {
+      for (let i = 0; i < allLayers.length; i++) {
+          const layer = allLayers[i];
+          layer.filters = filters;
+      }
+
+      Layers.render();  // Render to show the preview
+      console.log(`Preview applied to all layers with filters`, filters);
+  }
+
+  // Function to get the current filters based on the dialog inputs
+  function getCurrentFilters(html) {
+      const filters = [];
+
+      // Contrast
+      const contrastValue = parseInt(html.find('input[name="contrastValue"]').val());
+      if (contrastValue !== 0) {
+          filters.push({
+              id: Math.floor(Math.random() * 1000000000),
+              name: "contrast",
+              params: {
+                  value: contrastValue
+              }
+          });
+      }
+
+      // Blur
+      const blurValue = parseInt(html.find('input[name="blurValue"]').val());
+      if (blurValue > 0) {
+          filters.push({
+              id: Math.floor(Math.random() * 1000000000),
+              name: "blur",
+              params: {
+                  value: blurValue
+              }
+          });
+      }
+      // Hue rotation
+      const hueValue = parseInt(html.find('input[name="hueValue"]').val());
+      if (hueValue > 0) {
+          filters.push({
+              id: Math.floor(Math.random() * 1000000000),
+              name: "hue-rotate",
+              params: {
+                  value: hueValue
+              }
+          });
+      }
+      // Brightness
+      const brightnessValue = parseInt(html.find('input[name="brightnessValue"]').val());
+      if (brightnessValue !== 0) {
+          filters.push({
+              id: Math.floor(Math.random() * 1000000000),
+              name: "brightness",
+              params: {
+                  value: brightnessValue
+              }
+          });
+      }
+
+      // Grayscale
+      const grayscaleValue = parseInt(html.find('input[name="grayscaleValue"]').val());
+      if (grayscaleValue > 0) {
+          filters.push({
+              id: Math.floor(Math.random * 1000000000),
+              name: "grayscale",
+              params: {
+                  value: grayscaleValue
+              }
+          });
+      }
+
+      // Invert
+      const invertValue = parseInt(html.find('input[name="invertValue"]').val());
+      if (invertValue > 0) {
+          filters.push({
+              id: Math.floor(Math.random() * 1000000000),
+              name: "invert",
+              params: {
+                  value: invertValue
+              }
+          });
+      }
+
+      // Saturate
+      const saturateValue = parseInt(html.find('input[name="saturateValue"]').val());
+      if (saturateValue !== 0) {
+          filters.push({
+              id: Math.floor(Math.random() * 1000000000),
+              name: "saturate",
+              params: {
+                  value: saturateValue
+              }
+          });
+      }
+
+      // Sepia
+      const sepiaValue = parseInt(html.find('input[name="sepiaValue"]').val());
+      if (sepiaValue > 0) {
+          filters.push({
+              id: Math.floor(Math.random() * 1000000000),
+              name: "sepia",
+              params: {
+                  value: sepiaValue
+              }
+          });
+      }
+
+      // Shadow
+      const shadowOffsetX = parseInt(html.find('input[name="shadowOffsetX"]').val());
+      const shadowOffsetY = parseInt(html.find('input[name="shadowOffsetY"]').val());
+      const shadowRadius = parseInt(html.find('input[name="shadowRadius"]').val());
+      const shadowColor = html.find('input[name="shadowColor"]').val();
+
+      if (shadowOffsetX !== 0 || shadowOffsetY !== 0 || shadowRadius > 0) {
+          filters.push({
+              id: Math.floor(Math.random() * 1000000000),
+              name: "shadow",
+              params: {
+                  x: shadowOffsetX,
+                  y: shadowOffsetY,
+                  value: shadowRadius,
+                  color: shadowColor
+              }
+          });
+      }
+
+      return filters;
+  }
+
+  // Function to revert to the original filters
+  function revertToOriginal() {
+      for (let i = 0; i < allLayers.length; i++) {
+          allLayers[i].filters = originalFilters[i];
+      }
+      Layers.render();  // Re-render with the original filters
+      console.log("Reverted to original filters on all layers.");
+  }
+
+  // Create the dialog with a slider for live updates
+  new Dialog({
+      title: "Apply Filters",
+      content: `
+          <form>
+              <div style="display: grid; grid-template-columns: 1fr 4fr 1fr; grid-gap: 10px;">
+                  <label for="contrastValue">Contrast:</label>
+                  <input type="range" name="contrastValue" value="0" min="-100" max="100" step="1">
+                  <output>0</output>
+              </div>
+              <hr>
+              <div style="display: grid; grid-template-columns: 1fr 4fr 1fr; grid-gap: 10px;">
+                  <label for="blurValue">Blur:</label>
+                  <input type="range" name="blurValue" value="0" min="0" max="50" step="1">
+                  <output>0</output>
+              </div>
+              <hr>
+              <div style="display: grid; grid-template-columns: 1fr 4fr 1fr; grid-gap: 10px;">
+                  <label for="hueValue">Hue:</label>
+                  <input type="range" name="hueValue" value="0" min="0" max="360" step="1">
+                  <output>0</output>
+              </div>
+              <hr>
+              <div style="display: grid; grid-template-columns: 1fr 4fr 1fr; grid-gap: 10px;">
+                  <label for="brightnessValue">Brightness:</label>
+                  <input type="range" name="brightnessValue" value="0" min="-100" max="100" step="1">
+                  <output>0</output>
+              </div>
+              <hr>
+              <div style="display: grid; grid-template-columns: 1fr 4fr 1fr; grid-gap: 10px;">
+                  <label for="grayscaleValue">Grayscale:</label>
+                  <input type="range" name="grayscaleValue" value="0" min="0" max="100" step="1">
+                  <output>0</output>
+              </div>
+              <hr>
+              <div style="display: grid; grid-template-columns: 1fr 4fr 1fr; grid-gap: 10px;">
+                  <label for="invertValue">Invert:</label>
+                  <input type="range" name="invertValue" value="0" min="0" max="100" step="1">
+                  <output>0</output>
+              </div>
+              <hr>
+              <div style="display: grid; grid-template-columns: 1fr 4fr 1fr; grid-gap: 10px;">
+                  <label for="saturateValue">Saturate:</label>
+                  <input type="range" name="saturateValue" value="0" min="-100" max="100" step="1">
+                  <output>0</output>
+              </div>
+              <hr>
+              <div style="display: grid; grid-template-columns: 1fr 4fr 1fr; grid-gap: 10px;">
+                  <label for="sepiaValue">Sepia:</label>
+                  <input type="range" name="sepiaValue" value="0" min="0" max="100" step="1">
+                  <output>0</output>
+              </div>
+              <hr>
+              <div style="font-weight: bold; margin-top: 10px;">Shadow</div>
+              <div style="display: grid; grid-template-columns: 1fr 4fr 1fr; grid-gap: 10px;">
+                  <label for="shadowOffsetX">Offset X:</label>
+                  <input type="range" name="shadowOffsetX" value="0" min="-100" max="100" step="1">
+                  <output>0</output>
+              </div>
+              <div style="display: grid; grid-template-columns: 1fr 4fr 1fr; grid-gap: 10px;">
+                  <label for="shadowOffsetY">Offset Y:</label>
+                  <input type="range" name="shadowOffsetY" value="0" min="-100" max="100" step="1">
+                  <output>0</output>
+              </div>
+              <div style="display: grid; grid-template-columns: 1fr 4fr 1fr; grid-gap: 10px;">
+                  <label for="shadowRadius">Radius:</label>
+                  <input type="range" name="shadowRadius" value="0" min="0" max="100" step="1">
+                  <output>0</output>
+              </div>
+              <div style="display: grid; grid-template-columns: 1fr 4fr; grid-gap: 10px;">
+                  <label for="shadowColor">Color:</label>
+                  <input type="color" name="shadowColor" value="#000000" style="width: 100%;">
+              </div>
+          </form>
+      `,
+      buttons: {
+          apply: {
+              label: "Apply to All Layers",
+              callback: html => {
+                  const filters = getCurrentFilters(html);
+
+                  // Apply the filters to all layers
+                  applyPreview(filters);
+
+                  filtersApplied = true;  // Set the flag to true indicating filters were applied
+              }
+          },
+          cancel: {
+              label: "Cancel",
+              callback: () => {
+                  revertToOriginal();
+                  console.log("Action canceled by the user.");
+              }
+          }
+      },
+      default: "apply",
+      close: () => {
+          // Revert only if filters were not applied
+          if (!filtersApplied) {
+              revertToOriginal();
+          }
+      },
+      render: html => {
+          // Attach event listeners to all sliders for live preview
+          html.find('input[type="range"]').each(function () {
+              const slider = $(this);
+              const output = slider.next('output');
+              slider.on('input', () => {
+                  output.val(slider.val());
+                  const filters = getCurrentFilters(html);
+                  applyPreview(filters);
+              });
+          });
+      }
+  }).render(true);
+}

@@ -299,7 +299,7 @@ OpenGifMenuItem.target = "_self";
 OpenGifMenuItem.dataset.level = "79";
 OpenGifMenuItem.dataset.index = "10";
 OpenGifMenuItem.innerHTML = `
-  <span class="name">Open GIF</span>
+  <span class="name">Open Animation</span>
 `;
 OpenGifMenuItem.onclick = () => openGif();
 // Insert "Save as GIF" menu item after "Save as Frame"
@@ -313,7 +313,7 @@ saveAsGifMenuItem.target = "_self";
 saveAsGifMenuItem.dataset.level = "73";
 saveAsGifMenuItem.dataset.index = "8";
 saveAsGifMenuItem.innerHTML = `
-  <span class="name">Save as GIF</span>
+  <span class="name">Save Animation</span>
 `;
 saveAsGifMenuItem.onclick = () => window.parent.saveAnimation();
 
@@ -327,7 +327,18 @@ saveAsMenuItem.parentNode.insertBefore(saveItemMenuItem, saveTokenMenuItem);
     }
   });
 }
+const fxButton = iframeDocument.getElementById('multieffect');
 
+if (fxButton) {
+    // Modify the button's onclick event to trigger the applyFiltersToAllLayersWithPreview function
+    fxButton.onclick = () => {
+        // Assuming applyFiltersToAllLayersWithPreview is defined in the parent window
+        window.parent.applyFiltersToAllLayersWithPreview();
+    };
+
+    // Optionally, you can modify the button's appearance or add additional attributes if needed
+    fxButton.title = "Apply filters to all layers with preview";
+}
 
    const menuBar = iframeDocument.querySelector('.menu_bar');
 
