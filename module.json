@@ -7,6 +7,8 @@
         "js/gallery.js",
         "js/gif.js",
         "js/gif.worker.js",
+        "js/imagefilters.js",
+        "js/glfx.js",
         "js/omggif.js"
     ],
     "authors": [
