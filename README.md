@@ -1,4 +1,7 @@
+![GitHub issues](https://img.shields.io/github/issues-raw/tirzah2/minipaint?style=for-the-badge) ![Latest Release Download Count](https://img.shields.io/github/downloads/tirzah2/minipaint/latest/module.zip?color=2b82fc&label=DOWNLOADS&style=for-the-badge) [![Forge Installs](https://img.shields.io/badge/dynamic/json?label=Forge%20Installs&query=package.installs&suffix=%25&url=https%3A%2F%2Fforge-vtt.com%2Fapi%2Fbazaar%2Fpackage%2Fminipaint&colorB=006400&style=for-the-badge)](https://forge-vtt.com/bazaar#package=minipaint)  [![Foundry Hub Endorsements](https://img.shields.io/endpoint?logoColor=white&url=https%3A%2F%2Fwww.foundryvtt-hub.com%2Fwp-json%2Fhubapi%2Fv1%2Fpackage%2Fminipaint%2Fshield%2Fendorsements&style=for-the-badge)](https://www.foundryvtt-hub.com/package/minipaint/) ![GitHub all releases](https://img.shields.io/github/downloads/tirzah2/minipaint/total?style=for-the-badge)
+
 Support Me on Ko-Fi! :D
+
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/D1D210UKH9)
 
 ### Overview
